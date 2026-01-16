@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OCBC Dashboard</title>
+
+  <!-- Fonts (optional, can change later) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="index.css" />
+</head>
+
+<body>
+
+  <!-- ================= NAVBAR ================= -->
+  <header class="navbar">
+    <div class="navbar-left">
+      <div class="logo">O</div>
+      <nav class="nav-links">
+        <a class="active" href="#">My Dashboard</a>
+        <a href="#">Bank Services</a>
+        <a href="#">About OCBC</a>
+        <a href="#">Help Desk</a>
+      </nav>
+    </div>
+
+    <div class="navbar-right">
+      <span class="market">MARKET (USD/SGD) <strong class="up">1.3421 ↑</strong></span>
+      <div class="user">
+        <span class="tier">PREMIER BANKING</span>
+        <div class="avatar">JD</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= MAIN ================= -->
+  <main>
+
+    <!-- ===== Welcome Banner ===== -->
+    <section class="welcome-card">
+      <div class="welcome-text">
+        <h1>Welcome back, <span class="highlight">John</span>.</h1>
+        <p>Your OCBC 360 portfolio has seen <span class="positive">+2.4%</span> growth since last login.</p>
+      </div>
+
+      <div class="welcome-actions">
+        <button class="btn light">Explore Products</button>
+        <button class="btn dark">Bank Heritage</button>
+      </div>
+    </section>
+
+    <!-- ===== Account Summary ===== -->
+    <section class="summary-cards">
+
+      <div class="card">
+        <span class="card-title">360 TOTAL SAVINGS</span>
+        <h2>S$24,400.80</h2>
+        <span class="badge negative">-882.1</span>
+      </div>
+
+      <div class="card">
+        <span class="card-title">BLUE CHIP PORTFOLIO</span>
+        <h2>S$842,200.00</h2>
+        <span class="badge warning">AGGRESSIVE</span>
+      </div>
+
+      <div class="card">
+        <span class="card-title">PENDING FAST CREDITS</span>
+        <h2>2 Transfers</h2>
+        <span class="badge neutral">S$1,200.00</span>
+      </div>
+
+    </section>
+
+    <!-- ===== AI Support Section ===== -->
+    <section class="ai-support">
+
+      <span class="ai-tag">OCBC INTELLIGENT NAVIGATOR</span>
+
+      <h2>
+        Simply Spot On<br>
+        <span class="ai-highlight">AI Support.</span>
+      </h2>
+
+      <p>Instant guides for app functions, bank history, or dedicated consultation.</p>
+
+      <!-- Chat Container -->
+      <div class="chat-frame">
+
+        <!-- Messages -->
+        <div id="chat-messages"></div>
+
+        <!-- Input -->
+        <div class="chat-input">
+          <input
+            type="text"
+            id="user-input"
+            placeholder="Ask a follow-up question..."
+          />
+          <button id="send-btn">SEND</button>
+        </div>
+
+      </div>
+
+    </section>
+  </main>
+
+  <!-- ================= FOOTER ================= -->
+  <footer class="footer">
+
+    <div class="footer-grid">
+
+      <div class="footer-brand">
+        <div class="footer-logo">O</div>
+        <p>
+          Serving Southeast Asia with integrity and digital excellence.
+          Singapore’s longest established bank.
+        </p>
+      </div>
+
+      <div class="footer-col">
+        <h4>WEALTH</h4>
+        <a href="#">Premier Banking</a>
+        <a href="#">FRANK Accounts</a>
+        <a href="#">Home Loans</a>
+        <a href="#">Investment Hub</a>
+      </div>
+
+      <div class="footer-col">
+        <h4>CORPORATE</h4>
+        <a href="#">Sustainability</a>
+        <a href="#">Annual Report</a>
+        <a href="#">Investor Relations</a>
+        <a href="#">Media Centre</a>
+      </div>
+
+      <div class="footer-col">
+        <h4>SUPPORT</h4>
+        <a href="#">Help Center</a>
+        <a href="#">SmartHelp AI</a>
+        <a href="#">Security Alerts</a>
+        <a href="#">Branch Locator</a>
+        <a href="#">Contact Us</a>
+      </div>
+
+    </div>
+
+    <div class="footer-bottom">
+      <span>© 2024 OCBC Bank · Member SDIC · All Rights Reserved</span>
+      <div class="footer-links">
+        <a href="#">Privacy</a>
+        <a href="#">Security</a>
+        <a href="#">Legal</a>
+      </div>
+    </div>
+
+  </footer>
+  <script src="index.js"></script>
+</body>
+</html>
