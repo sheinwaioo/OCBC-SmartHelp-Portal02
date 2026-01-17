@@ -438,3 +438,524 @@ main {
 .footer-links a {
   margin-left: 16px;
 }
+/* ================= AUTHENTICATION ================= */
+.auth-btn {
+  background: #ef2b2d;
+  color: #fff;
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.auth-btn:hover {
+  background: #dc2222;
+  transform: scale(1.05);
+}
+
+.user-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* ================= MODALS ================= */
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal.open {
+  display: flex;
+}
+
+.modal-content {
+  background: #fff;
+  border-radius: 20px;
+  padding: 32px;
+  position: relative;
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.15);
+  animation: slideUp 0.3s ease;
+}
+
+.modal-content.modal-medium {
+  max-width: 600px;
+}
+
+.modal-content.modal-small {
+  max-width: 400px;
+}
+
+.modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: #f1f5f9;
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+  background: #e2e8f0;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ================= AUTH FORMS ================= */
+.auth-form {
+  display: none;
+}
+
+.auth-form.active,
+.auth-form#login-form {
+  display: block;
+}
+
+.auth-form h2 {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 24px;
+  color: #0f172a;
+}
+
+.auth-form form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.auth-form input {
+  padding: 12px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.auth-form input:focus {
+  outline: none;
+  border-color: #ef2b2d;
+  box-shadow: 0 0 0 3px rgba(239, 43, 45, 0.1);
+}
+
+.auth-form p {
+  font-size: 14px;
+  color: #64748b;
+  text-align: center;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: #ef2b2d;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+
+/* ================= BUTTONS ================= */
+.btn-primary {
+  background: #ef2b2d;
+  color: #fff;
+  padding: 12px 24px;
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.btn-primary:hover {
+  background: #dc2222;
+  transform: scale(1.02);
+}
+
+.btn-primary:active {
+  transform: scale(0.98);
+}
+
+/* ================= CHAT OPTIONS ================= */
+.quick-replies,
+.chat-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.quick-reply,
+.option-button {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #0f172a;
+}
+
+.quick-reply:hover,
+.option-button:hover {
+  background: #ef2b2d;
+  color: #fff;
+  border-color: #ef2b2d;
+  transform: translateY(-2px);
+}
+
+.quick-reply:active,
+.option-button:active {
+  transform: translateY(0);
+}
+
+/* ================= ACTIONS GRID ================= */
+.actions-grid,
+.branches-grid,
+.time-slots-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.action-item,
+.branch-item,
+.time-slot {
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.action-item:hover,
+.branch-item:hover,
+.time-slot:hover {
+  border-color: #ef2b2d;
+  background: #fff1f1;
+  transform: translateX(4px);
+}
+
+.action-item h3,
+.branch-item h3 {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.action-item p,
+.branch-item p {
+  font-size: 13px;
+  color: #64748b;
+}
+
+/* ================= QR CODE ================= */
+.qr-display {
+  background: #f8fafc;
+  border: 2px dashed #e2e8f0;
+  border-radius: 12px;
+  padding: 40px;
+  text-align: center;
+  margin-bottom: 20px;
+  font-size: 48px;
+}
+
+.qr-placeholder {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 60px 40px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: bold;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+}
+
+.qr-placeholder::before {
+  content: "";
+  display: block;
+  width: 200px;
+  height: 200px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.qr-instructions {
+  background: #f1f5f9;
+  padding: 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.8;
+  margin-bottom: 16px;
+}
+
+.qr-instructions li {
+  margin-bottom: 8px;
+}
+
+/* ================= QUEUE STATUS ================= */
+.queue-content {
+  padding: 20px 0;
+}
+
+.queue-info {
+  background: #f1f5f9;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.queue-position {
+  font-size: 28px;
+  font-weight: 700;
+  color: #ef2b2d;
+  text-align: center;
+  margin: 12px 0;
+}
+
+.queue-wait {
+  text-align: center;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.queue-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.queue-actions button {
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.queue-actions button:hover {
+  background: #ef2b2d;
+  color: #fff;
+  border-color: #ef2b2d;
+}
+
+/* ================= QR CODE TICKET ================= */
+.qr-ticket {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 24px;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  border-radius: 16px;
+  color: #fff;
+  text-align: center;
+}
+
+.qr-code-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  background: #fff;
+  padding: 16px;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.qr-image {
+  width: 280px;
+  height: 280px;
+  border-radius: 8px;
+}
+
+.consultation-id {
+  font-size: 18px;
+  font-weight: 700;
+  color: #ef2b2d;
+  letter-spacing: 2px;
+}
+
+.qr-ticket h3 {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 8px 0;
+}
+
+.qr-validity {
+  display: inline-block;
+  font-size: 14px;
+  color: #ff6b6b;
+  font-weight: 600;
+  padding: 8px 12px;
+  background: rgba(255, 107, 107, 0.1);
+  border-radius: 6px;
+  margin: 8px 0;
+}
+
+.qr-description {
+  font-size: 13px;
+  color: #cbd5e1;
+  line-height: 1.6;
+  max-width: 400px;
+}
+
+.qr-branch-info {
+  font-size: 14px;
+  color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 12px 16px;
+  border-radius: 8px;
+  width: 100%;
+}
+
+.qr-branch-info strong {
+  display: block;
+  margin-bottom: 6px;
+  color: #fff;
+}
+
+.qr-instructions-list {
+  background: #f8fafc;
+  padding: 16px;
+  border-radius: 8px;
+  text-align: left;
+  color: #0f172a;
+  margin-top: 16px;
+}
+
+.qr-instructions-list h4 {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: #0f172a;
+}
+
+.qr-instructions-list p {
+  font-size: 13px;
+  color: #475569;
+  margin: 6px 0;
+  line-height: 1.5;
+}
+
+#qr-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+#download-qr {
+  background: #ef2b2d;
+  color: #fff;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 12px;
+}
+
+#download-qr:hover {
+  background: #d92222;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(239, 43, 45, 0.3);
+}
+
+/* ================= ANIMATIONS ================= */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOut {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 768px) {
+  .modal-content {
+    max-width: 90%;
+    padding: 24px;
+  }
+
+  .summary-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .chat-frame {
+    height: 400px;
+  }
+
+  .navbar {
+    padding: 0 16px;
+  }
+
+  .market {
+    display: none;
+  }
+
+  main {
+    padding: 0 16px;
+  }
+}

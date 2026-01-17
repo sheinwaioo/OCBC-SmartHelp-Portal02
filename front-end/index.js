@@ -1,70 +1,35 @@
-const sendBtn = document.getElementById("send-btn");
-const userInput = document.getElementById("user-input");
-const chatMessages = document.getElementById("chat-messages");
+/**
+ * Main initialization and page-level functionality
+ */
 
-sendBtn.addEventListener("click", sendMessage);
-userInput.addEventListener("keypress", (e) => {
-  if (e.key === "Enter") sendMessage();
+// Initialize on DOM ready
+document.addEventListener("DOMContentLoaded", () => {
+  // Update dashboard with logged-in user info if available
+  if (currentUser) {
+    document.getElementById("user-name").textContent = currentUser.fullName.split(" ")[0];
+    document.getElementById("balance-display").textContent = formatCurrency(currentUser.accountBalance || 50000);
+    document.getElementById("account-display").textContent = currentUser.accountNumber || "OCBC****";
+  }
 });
 
-async function sendMessage() {
-  const message = userInput.value.trim();
-  if (!message) return;
+// Navigation links functionality
+document.querySelectorAll(".nav-link").forEach(link => {
+  link.addEventListener("click", (e) => {
+    e.preventDefault();
+    const target = e.target.getAttribute("href");
 
-  // Add user message
-  addMessage(message, "user");
-  userInput.value = "";
+    // Remove active class from all links
+    document.querySelectorAll(".nav-link").forEach(l => l.classList.remove("active"));
 
-  // Add thinking indicator
-  const thinking = addMessage("Thinking...", "ai");
+    // Add active class to clicked link
+    e.target.classList.add("active");
 
-  try {
-    const res = await fetch("http://localhost:3000/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message })
-    });
-
-    const data = await res.json();
-    thinking.innerHTML = formatAIReply(data.reply || "No response.");
-
-  } catch (err) {
-    thinking.textContent = "Unable to reach AI service.";
-  }
-
-  chatMessages.scrollTop = chatMessages.scrollHeight;
-}
-
-/* ---------- FORMATTER ---------- */
-
-function formatAIReply(text) {
-  if (!text) return "";
-
-  // Escape HTML
-  text = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-
-  // Bold
-  text = text.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
-
-  // Paragraphs
-  return text
-    .split(/\n{2,}/)
-    .map(p => `<p>${p.replace(/\n/g, "<br>")}</p>`)
-    .join("");
-}
-
-/* ---------- MESSAGE CREATOR ---------- */
-
-function addMessage(text, sender) {
-  const msg = document.createElement("div");
-  msg.className = `chat-message ${sender}`;
-
-  if (sender === "ai") {
-    msg.innerHTML = formatAIReply(text);
-  } else {
-    msg.textContent = text;
-  }
-
-  chatMessages.appendChild(msg);
-  return msg;
-}
+    // Scroll to section (if exists)
+    if (target && target !== "#") {
+      const element = document.querySelector(target);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth" });
+      }
+    }
+  });
+});

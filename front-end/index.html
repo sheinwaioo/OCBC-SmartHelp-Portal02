@@ -21,18 +21,21 @@
     <div class="navbar-left">
       <div class="logo">O</div>
       <nav class="nav-links">
-        <a class="active" href="#">My Dashboard</a>
-        <a href="#">Bank Services</a>
-        <a href="#">About OCBC</a>
-        <a href="#">Help Desk</a>
+        <a class="nav-link" href="#dashboard">My Dashboard</a>
+        <a class="nav-link" href="#services">Bank Services</a>
+        <a class="nav-link" href="#about">About OCBC</a>
+        <a class="nav-link" href="#helpdesk">Help Desk</a>
       </nav>
     </div>
 
     <div class="navbar-right">
       <span class="market">MARKET (USD/SGD) <strong class="up">1.3421 ↑</strong></span>
-      <div class="user">
-        <span class="tier">PREMIER BANKING</span>
-        <div class="avatar">JD</div>
+      <div class="user-section">
+        <button class="auth-btn" id="auth-toggle">Login</button>
+        <div class="user" id="user-profile" style="display:none;">
+          <span class="tier" id="user-tier">PREMIUM</span>
+          <div class="avatar" id="user-avatar">JD</div>
+        </div>
       </div>
     </div>
   </header>
@@ -41,9 +44,9 @@
   <main>
 
     <!-- ===== Welcome Banner ===== -->
-    <section class="welcome-card">
+    <section class="welcome-card" id="welcome-card">
       <div class="welcome-text">
-        <h1>Welcome back, <span class="highlight">John</span>.</h1>
+        <h1>Welcome back, <span class="highlight" id="user-name">User</span>.</h1>
         <p>Your OCBC 360 portfolio has seen <span class="positive">+2.4%</span> growth since last login.</p>
       </div>
 
@@ -54,24 +57,24 @@
     </section>
 
     <!-- ===== Account Summary ===== -->
-    <section class="summary-cards">
+    <section class="summary-cards" id="summary-cards">
 
       <div class="card">
         <span class="card-title">360 TOTAL SAVINGS</span>
-        <h2>S$24,400.80</h2>
-        <span class="badge negative">-882.1</span>
+        <h2 id="balance-display">S$0.00</h2>
+        <span class="badge neutral">Account</span>
       </div>
 
       <div class="card">
-        <span class="card-title">BLUE CHIP PORTFOLIO</span>
-        <h2>S$842,200.00</h2>
-        <span class="badge warning">AGGRESSIVE</span>
+        <span class="card-title">ACCOUNT NUMBER</span>
+        <h2 id="account-display">OCBC****</h2>
+        <span class="badge neutral">Active</span>
       </div>
 
       <div class="card">
-        <span class="card-title">PENDING FAST CREDITS</span>
-        <h2>2 Transfers</h2>
-        <span class="badge neutral">S$1,200.00</span>
+        <span class="card-title">ENQUIRY HISTORY</span>
+        <h2 id="enquiry-count">0</h2>
+        <span class="badge neutral">Recent</span>
       </div>
 
     </section>
@@ -108,6 +111,89 @@
 
     </section>
   </main>
+
+  <!-- ================= MODALS ================= -->
+  
+  <!-- Login/Register Modal -->
+  <div id="auth-modal" class="modal">
+    <div class="modal-content">
+      <button class="modal-close">&times;</button>
+      
+      <div id="login-form" class="auth-form">
+        <h2>Login to OCBC SmartHelp</h2>
+        <form>
+          <input type="email" placeholder="Email" required id="login-email" />
+          <input type="password" placeholder="Password" required id="login-password" />
+          <button type="submit" class="btn-primary">Login</button>
+        </form>
+        <p>Don't have an account? <button class="link-btn" onclick="switchToRegister()">Register here</button></p>
+      </div>
+
+      <div id="register-form" class="auth-form" style="display:none;">
+        <h2>Create Your Account</h2>
+        <form>
+          <input type="text" placeholder="Full Name" required id="register-name" />
+          <input type="email" placeholder="Email" required id="register-email" />
+          <input type="password" placeholder="Password" required id="register-password" />
+          <input type="password" placeholder="Confirm Password" required id="register-confirm" />
+          <button type="submit" class="btn-primary">Register</button>
+        </form>
+        <p>Already have an account? <button class="link-btn" onclick="switchToLogin()">Login here</button></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Actions Modal -->
+  <div id="actions-modal" class="modal">
+    <div class="modal-content modal-medium">
+      <button class="modal-close">&times;</button>
+      <h2 id="actions-title">Select an Option</h2>
+      <div id="actions-list" class="actions-grid"></div>
+    </div>
+  </div>
+
+  <!-- Branch Selection Modal -->
+  <div id="branch-modal" class="modal">
+    <div class="modal-content modal-medium">
+      <button class="modal-close">&times;</button>
+      <h2>Select Your Preferred Branch</h2>
+      <div id="branches-list" class="branches-grid"></div>
+    </div>
+  </div>
+
+  <!-- Callback Time Selection Modal -->
+  <div id="callback-modal" class="modal">
+    <div class="modal-content modal-medium">
+      <button class="modal-close">&times;</button>
+      <h2>When Would You Like a Callback?</h2>
+      <div id="time-slots" class="time-slots-grid"></div>
+    </div>
+  </div>
+
+  <!-- QR Code Modal -->
+  <div id="qr-modal" class="modal">
+    <div class="modal-content modal-small">
+      <button class="modal-close">&times;</button>
+      <h2>Your Consultation QR Code</h2>
+      <div id="qr-content" class="qr-content">
+        <div id="qr-code" class="qr-display"></div>
+        <div id="qr-instructions" class="qr-instructions"></div>
+        <button id="download-qr" class="btn-primary">Download QR Code</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Queue Status Modal -->
+  <div id="queue-modal" class="modal">
+    <div class="modal-content modal-small">
+      <button class="modal-close">&times;</button>
+      <h2>Queue Status</h2>
+      <div id="queue-content" class="queue-content">
+        <div id="queue-info"></div>
+        <div id="queue-actions"></div>
+      </div>
+    </div>
+  </div>
 
   <!-- ================= FOOTER ================= -->
   <footer class="footer">
@@ -159,6 +245,9 @@
     </div>
 
   </footer>
+  <script src="utils.js"></script>
+  <script src="auth.js"></script>
+  <script src="chatbot.js"></script>
   <script src="index.js"></script>
 </body>
 </html>
