@@ -135,6 +135,14 @@ If message is unclear or off-topic, set category to "unknown".
 function classifyIntentDemo(userMessage) {
   const msg = userMessage.toLowerCase();
   
+  // Greeting keywords - return unknown with high confidence so bot can greet user
+  if (msg.includes("hi") || msg.includes("hello") || msg.includes("hey") || 
+      msg.includes("greetings") || msg.includes("how are you") || 
+      msg.includes("good morning") || msg.includes("good afternoon") || 
+      msg.includes("good evening") || msg === "hello") {
+    return { category: "unknown", subcategory: null, confidence: 0.95, isGreeting: true };
+  }
+  
   // Card Services keywords
   if (msg.includes("lost") || msg.includes("stolen") || msg.includes("card")) {
     return { category: "Card Services", subcategory: "Report Lost Card", confidence: 0.9 };

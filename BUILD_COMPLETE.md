@@ -54,7 +54,7 @@ cd back-end && npm start
 # Terminal 2 - Frontend (port 8080)
 cd front-end && python -m http.server 8080
 
-# Visit: http://localhost:8080
+# Visit: 
 ```
 
 **Test with:**
@@ -83,7 +83,7 @@ cd front-end && python -m http.server 8080
 ## 🎯 What's Working
 
 ✅ **Authentication**
-- Register new accounts
+- Register new accountshttp://localhost:8080
 - Login with JWT tokens
 - Persistent sessions
 - Protected routes

@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR UI Refactoring Preview - Elderly-Friendly Design</title>
+    <link rel="stylesheet" href="front-end/index.css">
+    <style>
+        body {
+            background: #f6f7f9;
+            padding: 20px;
+        }
+        .preview-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+        }
+        .preview-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: #0f172a;
+        }
+        .preview-subtitle {
+            font-size: 14px;
+            color: #64748b;
+            margin-bottom: 30px;
+        }
+        .device-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        .device-tab {
+            padding: 10px 16px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            color: #64748b;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+        .device-tab.active {
+            color: #ef2b2d;
+            border-bottom-color: #ef2b2d;
+        }
+        .preview-viewport {
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            background: white;
+        }
+        .preview-frame {
+            display: none;
+            padding: 20px;
+        }
+        .preview-frame.active {
+            display: block;
+        }
+        .desktop .preview-frame {
+            max-width: 600px;
+        }
+        .tablet .preview-frame {
+            max-width: 400px;
+        }
+        .mobile .preview-frame {
+            max-width: 360px;
+        }
+        .info-box {
+            background: #f0fdf4;
+            border-left: 4px solid #16a34a;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #0f172a;
+            line-height: 1.6;
+        }
+        .info-box strong {
+            color: #16a34a;
+        }
+    </style>
+</head>
+<body>
+    <div class="preview-container">
+        <div class="preview-title">🎯 QR Code UI Refactoring Preview</div>
+        <div class="preview-subtitle">Elderly-Friendly Layout with Clear Hierarchy</div>
+        
+        <div class="info-box">
+            <strong>✅ What Changed:</strong> Reorganized QR display with clear visual hierarchy - QR code is now the primary focus, with secondary details below. Improved accessibility and elderly-friendly design.
+        </div>
+
+        <div class="device-tabs">
+            <button class="device-tab active" onclick="switchView('desktop')">🖥️ Desktop (1024px)</button>
+            <button class="device-tab" onclick="switchView('tablet')">📱 Tablet (768px)</button>
+            <button class="device-tab" onclick="switchView('mobile')">📱 Mobile (360px)</button>
+        </div>
+
+        <div class="preview-viewport" id="viewport">
+            <!-- DESKTOP VIEW -->
+            <div class="preview-frame active desktop">
+                <div class="qr-primary-section">
+                    <div class="qr-code-container">
+                        <svg width="280" height="280" viewBox="0 0 280 280" style="background: white; border-radius: 8px;">
+                            <!-- Simplified QR code visualization -->
+                            <rect width="280" height="280" fill="white"/>
+                            <rect x="20" y="20" width="50" height="50" fill="#0f172a"/>
+                            <rect x="210" y="20" width="50" height="50" fill="#0f172a"/>
+                            <rect x="20" y="210" width="50" height="50" fill="#0f172a"/>
+                            <g opacity="0.5" fill="#0f172a">
+                                <rect x="80" y="50" width="10" height="10"/>
+                                <rect x="110" y="50" width="10" height="10"/>
+                                <rect x="140" y="50" width="10" height="10"/>
+                                <rect x="50" y="80" width="10" height="10"/>
+                                <rect x="200" y="80" width="10" height="10"/>
+                                <rect x="80" y="100" width="15" height="15"/>
+                                <rect x="130" y="130" width="20" height="20"/>
+                                <rect x="170" y="110" width="12" height="12"/>
+                                <rect x="90" y="200" width="10" height="10"/>
+                                <rect x="120" y="210" width="8" height="8"/>
+                                <rect x="150" y="220" width="10" height="10"/>
+                            </g>
+                        </svg>
+                    </div>
+                    
+                    <div class="qr-instruction-text">
+                        <h2 class="qr-main-title">Scan this QR code</h2>
+                        <p class="qr-location">at your selected OCBC branch</p>
+                    </div>
+                    
+                    <div class="qr-validity-section">
+                        <div class="validity-item">
+                            <span class="validity-label">Valid for</span>
+                            <span class="validity-value">7 working days</span>
+                        </div>
+                        <div class="validity-divider"></div>
+                        <div class="validity-item">
+                            <span class="validity-label">Expires</span>
+                            <span class="validity-value">24 Jan 2026</span>
+                        </div>
+                    </div>
+                    
+                    <button class="qr-download-btn">
+                        <span class="btn-icon">💾</span>
+                        <span class="btn-text">Download QR Code</span>
+                    </button>
+                </div>
+                
+                <div class="qr-secondary-section">
+                    <h3 class="secondary-title">Your Consultation Details</h3>
+                    
+                    <div class="qr-details-grid">
+                        <div class="detail-item">
+                            <span class="detail-label">Consultation ID</span>
+                            <span class="detail-value">ENQ-12345-XYZ</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Branch Location</span>
+                            <span class="detail-value">OCBC Marina Bay</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="qr-how-to-use">
+                    <h4 class="how-to-title">How to use this QR code</h4>
+                    <ol class="how-to-list">
+                        <li>Open your phone camera or any QR code scanner app</li>
+                        <li>Point it at this QR code</li>
+                        <li>Tap the notification to check in at your branch</li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- TABLET VIEW -->
+            <div class="preview-frame tablet" style="width: 100%; max-width: 400px; margin: 0 auto;">
+                <div class="qr-primary-section">
+                    <div class="qr-code-container">
+                        <svg width="280" height="280" viewBox="0 0 280 280" style="background: white; border-radius: 8px;">
+                            <rect width="280" height="280" fill="white"/>
+                            <rect x="20" y="20" width="50" height="50" fill="#0f172a"/>
+                            <rect x="210" y="20" width="50" height="50" fill="#0f172a"/>
+                            <rect x="20" y="210" width="50" height="50" fill="#0f172a"/>
+                            <g opacity="0.5" fill="#0f172a">
+                                <rect x="80" y="50" width="10" height="10"/>
+                                <rect x="110" y="50" width="10" height="10"/>
+                                <rect x="140" y="50" width="10" height="10"/>
+                                <rect x="50" y="80" width="10" height="10"/>
+                                <rect x="200" y="80" width="10" height="10"/>
+                                <rect x="80" y="100" width="15" height="15"/>
+                                <rect x="130" y="130" width="20" height="20"/>
+                                <rect x="170" y="110" width="12" height="12"/>
+                                <rect x="90" y="200" width="10" height="10"/>
+                                <rect x="120" y="210" width="8" height="8"/>
+                                <rect x="150" y="220" width="10" height="10"/>
+                            </g>
+                        </svg>
+                    </div>
+                    
+                    <div class="qr-instruction-text">
+                        <h2 class="qr-main-title">Scan this QR code</h2>
+                        <p class="qr-location">at your selected OCBC branch</p>
+                    </div>
+                    
+                    <div class="qr-validity-section">
+                        <div class="validity-item">
+                            <span class="validity-label">Valid for</span>
+                            <span class="validity-value">7 working days</span>
+                        </div>
+                        <div class="validity-divider"></div>
+                        <div class="validity-item">
+                            <span class="validity-label">Expires</span>
+                            <span class="validity-value">24 Jan 2026</span>
+                        </div>
+                    </div>
+                    
+                    <button class="qr-download-btn">
+                        <span class="btn-icon">💾</span>
+                        <span class="btn-text">Download QR Code</span>
+                    </button>
+                </div>
+                
+                <div class="qr-secondary-section">
+                    <h3 class="secondary-title">Your Consultation Details</h3>
+                    
+                    <div class="qr-details-grid">
+                        <div class="detail-item">
+                            <span class="detail-label">Consultation ID</span>
+                            <span class="detail-value">ENQ-12345-XYZ</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Branch Location</span>
+                            <span class="detail-value">OCBC Marina Bay</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="qr-how-to-use">
+                    <h4 class="how-to-title">How to use this QR code</h4>
+                    <ol class="how-to-list">
+                        <li>Open your phone camera or any QR code scanner app</li>
+                        <li>Point it at this QR code</li>
+                        <li>Tap the notification to check in at your branch</li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- MOBILE VIEW -->
+            <div class="preview-frame mobile" style="width: 100%; max-width: 360px; margin: 0 auto;">
+                <div class="qr-primary-section">
+                    <div class="qr-code-container">
+                        <svg width="240" height="240" viewBox="0 0 280 280" style="background: white; border-radius: 8px;">
+                            <rect width="280" height="280" fill="white"/>
+                            <rect x="20" y="20" width="50" height="50" fill="#0f172a"/>
+                            <rect x="210" y="20" width="50" height="50" fill="#0f172a"/>
+                            <rect x="20" y="210" width="50" height="50" fill="#0f172a"/>
+                            <g opacity="0.5" fill="#0f172a">
+                                <rect x="80" y="50" width="10" height="10"/>
+                                <rect x="110" y="50" width="10" height="10"/>
+                                <rect x="140" y="50" width="10" height="10"/>
+                                <rect x="50" y="80" width="10" height="10"/>
+                                <rect x="200" y="80" width="10" height="10"/>
+                                <rect x="80" y="100" width="15" height="15"/>
+                                <rect x="130" y="130" width="20" height="20"/>
+                                <rect x="170" y="110" width="12" height="12"/>
+                                <rect x="90" y="200" width="10" height="10"/>
+                                <rect x="120" y="210" width="8" height="8"/>
+                                <rect x="150" y="220" width="10" height="10"/>
+                            </g>
+                        </svg>
+                    </div>
+                    
+                    <div class="qr-instruction-text">
+                        <h2 class="qr-main-title">Scan this QR code</h2>
+                        <p class="qr-location">at your selected OCBC branch</p>
+                    </div>
+                    
+                    <div class="qr-validity-section">
+                        <div class="validity-item">
+                            <span class="validity-label">Valid for</span>
+                            <span class="validity-value">7 working days</span>
+                        </div>
+                        <div class="validity-divider"></div>
+                        <div class="validity-item">
+                            <span class="validity-label">Expires</span>
+                            <span class="validity-value">24 Jan 2026</span>
+                        </div>
+                    </div>
+                    
+                    <button class="qr-download-btn">
+                        <span class="btn-icon">💾</span>
+                        <span class="btn-text">Download QR Code</span>
+                    </button>
+                </div>
+                
+                <div class="qr-secondary-section">
+                    <h3 class="secondary-title">Your Consultation Details</h3>
+                    
+                    <div class="qr-details-grid">
+                        <div class="detail-item">
+                            <span class="detail-label">Consultation ID</span>
+                            <span class="detail-value">ENQ-12345-XYZ</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Branch Location</span>
+                            <span class="detail-value">OCBC Marina Bay</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="qr-how-to-use">
+                    <h4 class="how-to-title">How to use this QR code</h4>
+                    <ol class="how-to-list">
+                        <li>Open your phone camera or any QR code scanner app</li>
+                        <li>Point it at this QR code</li>
+                        <li>Tap the notification to check in at your branch</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <div style="background: #f8fafc; padding: 20px; border-radius: 12px; border-left: 4px solid #3b82f6;">
+            <strong style="color: #0f172a; display: block; margin-bottom: 10px;">✨ Key Improvements:</strong>
+            <ul style="margin: 0; padding-left: 20px; color: #475569; font-size: 14px; line-height: 1.8;">
+                <li><strong>Clear Hierarchy:</strong> QR code is the primary focus with large "Scan this QR code" instruction</li>
+                <li><strong>Reduced Cognitive Load:</strong> Details moved to secondary card below QR</li>
+                <li><strong>Accessibility:</strong> 16px+ font sizes, high contrast, clear visual separation</li>
+                <li><strong>Elderly-Friendly:</strong> Simple language ("Scan this QR code"), no technical jargon</li>
+                <li><strong>Mobile-First:</strong> Responsive design for all screen sizes, touch-friendly buttons (56px+)</li>
+                <li><strong>Immediate Action:</strong> Download button positioned right below QR code</li>
+                <li><strong>Validity Information:</strong> Prominent display of 7-day validity and exact expiry date</li>
+                <li><strong>No Scrolling:</strong> All content fits without scrolling on standard screens</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function switchView(device) {
+            document.querySelectorAll('.preview-frame').forEach(frame => {
+                frame.classList.remove('active');
+            });
+            document.querySelectorAll('.device-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            const viewport = document.getElementById('viewport');
+            viewport.className = `preview-viewport ${device}`;
+            
+            const frames = document.querySelectorAll(`.preview-frame.${device}`);
+            if (frames.length > 0) {
+                frames[0].classList.add('active');
+            }
+            
+            event.target.classList.add('active');
+        }
+    </script>
+</body>
+</html>

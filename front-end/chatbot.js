@@ -12,11 +12,17 @@ let chatFlowState = {
 };
 
 let lastQRData = null; // Store QR data for modal display
+let chatbotInitialized = false; // Flag to prevent duplicate initialization
 
 /**
  * Initialize chatbot on page load
  */
 function initChatbot() {
+  // Guard: Only initialize once
+  if (chatbotInitialized) {
+    return;
+  }
+  
   const sendBtn = document.getElementById("send-btn");
   const userInput = document.getElementById("user-input");
   const chatMessages = document.getElementById("chat-messages");
@@ -32,8 +38,13 @@ function initChatbot() {
     }
   });
 
-  // Show initial greeting
-  setTimeout(() => {
+  // Mark as initialized FIRST to prevent re-entry
+  chatbotInitialized = true;
+
+  // Show initial greeting only if chat is empty
+  const chatMessagesContainer = document.getElementById("chat-messages");
+  if (chatMessagesContainer && chatMessagesContainer.children.length === 0) {
+    // Add initial message without delay
     addBotMessage("Hello! 👋 Welcome to OCBC SmartHelp. I'm here to assist you with your banking inquiries. What can I help you with today?");
     showQuickReplies([
       "Card Services",
@@ -41,7 +52,7 @@ function initChatbot() {
       "Check Enquiry History",
       "View Available Consultations"
     ]);
-  }, 500);
+  }
 }
 
 /**
@@ -144,6 +155,20 @@ function handleSuggestedAction(action, options = []) {
  */
 function showQuickReplies(replies) {
   const chatMessages = document.getElementById("chat-messages");
+  
+  // Check if quick replies with same buttons already exist (deduplication)
+  const existingQuickReplies = chatMessages.querySelectorAll(".quick-replies");
+  if (existingQuickReplies.length > 0) {
+    const lastQuickReply = existingQuickReplies[existingQuickReplies.length - 1];
+    const lastButtons = Array.from(lastQuickReply.querySelectorAll("button")).map(btn => btn.textContent);
+    const isSameSet = replies.every(reply => lastButtons.includes(reply));
+    
+    if (isSameSet) {
+      console.warn("Duplicate quick replies prevented");
+      return;
+    }
+  }
+  
   const quickRepliesContainer = document.createElement("div");
   quickRepliesContainer.className = "quick-replies";
 
@@ -260,22 +285,71 @@ async function handleAssistanceSelection(option) {
 }
 
 /**
- * Display branch selection
+ * Display branch selection dropdown
  */
 function displayBranchSelection() {
   const branches = [
-    { name: "Main Branch - CBD", distance: "0.2km" },
-    { name: "Tampines Branch", distance: "4.5km" },
-    { name: "Orchard Branch", distance: "2.1km" },
-    { name: "Jurong East Branch", distance: "12.3km" }
+    { name: "Main Branch - CBD" },
+    { name: "Tampines Branch" },
+    { name: "Orchard Branch" },
+    { name: "Jurong East Branch" }
   ];
 
-  const options = branches.map(b => ({
-    text: `${b.name} (${b.distance})`,
-    value: b.name
-  }));
+  showBranchDropdown(branches);
+}
 
-  showOptionsButtons(options, "physical_consultation");
+/**
+ * Show branch selection as a dropdown
+ */
+function showBranchDropdown(branches) {
+  const chatMessages = document.getElementById("chat-messages");
+  
+  // Create container for label and dropdown
+  const container = document.createElement("div");
+  container.className = "branch-selection-container";
+  
+  // Create label
+  const label = document.createElement("label");
+  label.className = "branch-selection-label";
+  label.textContent = "Select your preferred branch:";
+  
+  // Create dropdown
+  const select = document.createElement("select");
+  select.className = "branch-dropdown";
+  select.id = "branch-select-dropdown";
+  
+  // Add placeholder option
+  const placeholderOption = document.createElement("option");
+  placeholderOption.value = "";
+  placeholderOption.textContent = "-- Choose a branch --";
+  placeholderOption.disabled = true;
+  placeholderOption.selected = true;
+  select.appendChild(placeholderOption);
+  
+  // Add branch options
+  branches.forEach(branch => {
+    const option = document.createElement("option");
+    option.value = branch.name;
+    option.textContent = branch.name;
+    select.appendChild(option);
+  });
+  
+  // Add change event listener
+  select.addEventListener("change", (e) => {
+    if (e.target.value) {
+      handleBranchSelection(e.target.value);
+      // Disable dropdown after selection to prevent re-selection
+      select.disabled = true;
+    }
+  });
+  
+  container.appendChild(label);
+  container.appendChild(select);
+  chatMessages.appendChild(container);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  
+  // Focus on dropdown for better UX
+  select.focus();
 }
 
 /**
@@ -425,6 +499,16 @@ function addUserMessage(text) {
  */
 function addBotMessage(text) {
   const chatMessages = document.getElementById("chat-messages");
+  
+  // Check if this exact message already exists (deduplication)
+  const existingMessages = Array.from(chatMessages.querySelectorAll(".chat-message.ai"));
+  const messageAlreadyExists = existingMessages.some(msg => msg.textContent.includes(text));
+  
+  if (messageAlreadyExists) {
+    console.warn("Duplicate message prevented:", text.substring(0, 50));
+    return;
+  }
+  
   const messageDiv = document.createElement("div");
   messageDiv.className = "chat-message ai";
   messageDiv.innerHTML = formatChatText(text);
@@ -442,37 +526,92 @@ function formatChatText(text) {
 }
 
 /**
- * Display QR Code Modal with ticket-style format
+ * Display QR Code Modal - REFACTORED FOR CLARITY
+ * Primary focus: QR code with clear instructions
+ * Secondary: Consultation details below
+ * Designed for elderly/non-technical users
  */
 function showQRCodeModal(qrData) {
   const modal = document.getElementById("qr-modal");
-  const qrContent = document.getElementById("qr-code");
+  const qrCode = document.getElementById("qr-code");
+  const qrDetails = document.getElementById("qr-details");
   const qrInstructions = document.getElementById("qr-instructions");
   
-  // Display QR code image with consultation ID
-  qrContent.innerHTML = `
-    <div class="qr-ticket">
-      <div class="qr-code-container">
-        <img src="${qrData.qrCode}" alt="Consultation QR Code" class="qr-image" />
-        <div class="consultation-id">${qrData.consultationId}</div>
+  // Store QR data globally for download function
+  window.lastQRData = qrData;
+  
+  // Calculate expiry date (7 days from now)
+  const expiryDate = new Date();
+  expiryDate.setDate(expiryDate.getDate() + 7);
+  const expiryFormatted = expiryDate.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric'
+  });
+  
+  // LEFT COLUMN: QR CODE IMAGE
+  qrCode.innerHTML = `
+    <div class="qr-code-wrapper">
+      <img 
+        src="${qrData.qrCode}" 
+        alt="Consultation QR code" 
+        class="qr-image-landscape"
+        width="280"
+        height="280"
+      />
+      <p class="qr-scan-instruction">Scan this QR code at your OCBC branch</p>
+    </div>
+  `;
+  
+  // RIGHT COLUMN: CONSULTATION DETAILS
+  qrDetails.innerHTML = `
+    <div class="qr-details-section">
+      <h3 class="qr-title">Your Consultation</h3>
+      
+      <div class="qr-info-block">
+        <div class="info-row">
+          <span class="info-label">Consultation ID</span>
+          <span class="info-value" id="detail-id">${qrData.consultationId}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Branch Location</span>
+          <span class="info-value">${qrData.branch}</span>
+        </div>
       </div>
-      <h3>Priority Queue Ticket</h3>
-      <div class="qr-validity">✓ Valid for 7 working days</div>
-      <p class="qr-description">This code contains your verified identity and enquiry details. Scan it at any branch kiosk nationwide to get a priority queue number instantly.</p>
-      <div class="qr-branch-info">
-        <strong>Selected Branch:</strong> ${qrData.branch}
+      
+      <div class="qr-validity-badge">
+        <span class="validity-label">Valid for:</span>
+        <span class="validity-text">7 working days until ${expiryFormatted}</span>
       </div>
     </div>
   `;
   
-  // Display instructions
+  // COLLAPSIBLE: HOW TO USE
   if (qrData.instructions && qrData.instructions.length > 0) {
     qrInstructions.innerHTML = `
-      <div class="qr-instructions-list">
-        <h4>Instructions:</h4>
-        ${qrData.instructions.map(inst => `<p>• ${inst}</p>`).join("")}
-      </div>
+      <ol class="qr-instructions-list">
+        ${qrData.instructions.map(inst => `<li>${inst}</li>`).join("")}
+      </ol>
     `;
+  }
+  
+  // Attach download handler
+  const downloadBtn = document.getElementById("download-qr-btn");
+  if (downloadBtn) {
+    downloadBtn.addEventListener("click", () => {
+      downloadQRCode(qrData);
+    });
+  }
+  
+  // Attach toggle handler for instructions
+  const toggleBtn = document.getElementById("qr-instructions-toggle");
+  const instructionsContent = document.getElementById("qr-instructions");
+  if (toggleBtn && instructionsContent) {
+    toggleBtn.addEventListener("click", () => {
+      const isHidden = instructionsContent.style.display === "none";
+      instructionsContent.style.display = isHidden ? "block" : "none";
+      toggleBtn.classList.toggle("expanded");
+    });
   }
   
   // Show modal
@@ -490,14 +629,6 @@ function showQRCodeModal(qrData) {
       modal.style.display = "none";
     }
   });
-  
-  // Handle download button
-  const downloadBtn = document.getElementById("download-qr");
-  if (downloadBtn) {
-    downloadBtn.addEventListener("click", () => {
-      downloadQRCode(qrData);
-    });
-  }
 }
 
 /**

@@ -23,17 +23,23 @@ export async function generateConsultationQR(userId, enquiryId, preferredBranch 
     const randomPart = Math.random().toString(36).substring(2, 5).toUpperCase();
     const consultationId = `ENQ-${timestamp}-${randomPart}`;
 
-    // QR code would encode: consultation ID, user ID, timestamp
+    // QR code encodes a scannable URL with token (for real-world use)
+    // Format: https://ocbc-smarthelp.sg/branch/check-in?token=ENQ-XXXX-XXX
+    const qrUrl = `https://ocbc-smarthelp.sg/branch/check-in?token=${consultationId}`;
+
+    // Store full data for reference
     const qrData = {
       consultationId,
       userId,
       timestamp: new Date().toISOString(),
-      branch: preferredBranch || "Main Branch"
+      branch: preferredBranch || "Main Branch",
+      url: qrUrl
     };
 
-    // Generate QR code as data URL (PNG image)
+    // Generate REAL, SCANNABLE QR code as PNG data URL
+    // The QR code encodes the URL, which can be scanned by any phone camera
     const qrCodeDataUrl = await QRCode.toDataURL(
-      JSON.stringify(qrData),
+      qrUrl,
       {
         errorCorrectionLevel: "H",
         type: "image/png",

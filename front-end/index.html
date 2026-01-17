@@ -172,13 +172,31 @@
 
   <!-- QR Code Modal -->
   <div id="qr-modal" class="modal">
-    <div class="modal-content modal-small">
+    <div class="modal-content qr-modal-landscape">
       <button class="modal-close">&times;</button>
-      <h2>Your Consultation QR Code</h2>
-      <div id="qr-content" class="qr-content">
-        <div id="qr-code" class="qr-display"></div>
-        <div id="qr-instructions" class="qr-instructions"></div>
-        <button id="download-qr" class="btn-primary">Download QR Code</button>
+      <div id="qr-content" class="qr-landscape-container">
+        <!-- Left Column: QR Code -->
+        <div class="qr-column-left">
+          <div id="qr-code" class="qr-display-landscape"></div>
+        </div>
+        
+        <!-- Right Column: Details & Actions -->
+        <div class="qr-column-right">
+          <div id="qr-details" class="qr-details-container"></div>
+          <button id="download-qr-btn" class="qr-download-btn-primary">
+            <span class="btn-icon">💾</span>
+            <span class="btn-text">Download QR Code</span>
+          </button>
+          
+          <!-- Collapsible Instructions Section -->
+          <div class="qr-instructions-section">
+            <button class="qr-instructions-toggle" id="qr-instructions-toggle">
+              <span class="toggle-icon">▶</span>
+              <span class="toggle-text">How to use this QR code</span>
+            </button>
+            <div id="qr-instructions" class="qr-instructions-content" style="display: none;"></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>

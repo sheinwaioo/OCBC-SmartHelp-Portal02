@@ -70,6 +70,19 @@ export async function chatWithAI(req, res) {
       newState.confidence = intent.confidence;
     }
 
+    // Handle greetings specifically
+    if (intent.isGreeting) {
+      response.message = "Hello! 👋 Welcome to OCBC SmartHelp. I'm here to assist you with your banking inquiries. What can I help you with today?";
+      response.suggestedAction = "select_category";
+      response.options = Object.values(CATEGORIES).map(cat => ({
+        text: cat,
+        value: cat
+      }));
+      response.flowState = newState;
+      res.json(response);
+      return;
+    }
+
     // Step 2: Detect or prompt for subcategory
     if (!newState.subcategory && newState.category !== "unknown") {
       // Try to extract subcategory from user message if confidence is high

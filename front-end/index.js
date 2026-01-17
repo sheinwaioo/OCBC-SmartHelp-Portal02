@@ -4,12 +4,18 @@
 
 // Initialize on DOM ready
 document.addEventListener("DOMContentLoaded", () => {
+  // Initialize authentication state
+  initAuth();
+
   // Update dashboard with logged-in user info if available
   if (currentUser) {
     document.getElementById("user-name").textContent = currentUser.fullName.split(" ")[0];
     document.getElementById("balance-display").textContent = formatCurrency(currentUser.accountBalance || 50000);
     document.getElementById("account-display").textContent = currentUser.accountNumber || "OCBC****";
   }
+
+  // Initialize chatbot
+  initChatbot();
 });
 
 // Navigation links functionality
