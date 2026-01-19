@@ -2,63 +2,86 @@ import supabase from "../supabaseClient.js";
 import { generateToken } from "../utils/jwtUtils.js";
 
 /**
- * Register a new user
- * UX Refinement: Auto-generate account number on first login
+ * Register a new customer
+ * Creates customer in Team's customer table with demo account
  */
 export async function register(req, res) {
   try {
-    const { email, password, fullName } = req.body;
+    const { email, password, name, mobileNumber } = req.body;
 
-    if (!email || !password || !fullName) {
+    if (!email || !password || !name) {
       return res.status(400).json({
-        error: "Email, password, and fullName are required"
+        error: "Email, password, and name are required"
       });
     }
 
-    // Check if user already exists
-    const { data: existingUser } = await supabase
-      .from("users")
-      .select("id")
+    // Check if customer already exists
+    const { data: existingCustomer } = await supabase
+      .from("customer")
+      .select("customer_id")
       .eq("email", email)
       .single();
 
-    if (existingUser) {
+    if (existingCustomer) {
       return res.status(409).json({
-        error: "User with this email already exists"
+        error: "Customer with this email already exists"
       });
     }
 
-    // Insert new user (password hashing would happen in production)
-    const { data: newUser, error } = await supabase
-      .from("users")
+    // Insert new customer (Team's schema)
+    const { data: newCustomer, error: registerError } = await supabase
+      .from("customer")
       .insert([
         {
           email,
           password, // In production, use bcrypt to hash
-          full_name: fullName,
-          account_number: generateAccountNumber(),
-          account_balance: 50000, // Demo balance
-          created_at: new Date()
+          name,
+          mobile_number: mobileNumber || null,
+          address: null,
+          pin_number: null,
+          TotpSecret: null,
+          IsMfaVerified: false,
+          joined_at: new Date()
         }
       ])
       .select()
       .single();
 
-    if (error) {
-      console.error("Supabase error:", error);
-      return res.status(500).json({ error: "Failed to create user" });
+    if (registerError) {
+      console.error("Supabase error:", registerError);
+      return res.status(500).json({ error: "Failed to create customer" });
     }
 
-    const token = generateToken(newUser.id, newUser.email);
+    // Create demo account for customer
+    const accountNumber = generateAccountNumber();
+    const { error: accountError } = await supabase
+      .from("account")
+      .insert([
+        {
+          account_number: accountNumber,
+          customer_id: newCustomer.customer_id,
+          balance: 50000.00,
+          transaction_limit: 100000.00,
+          type: "SAVINGS",
+          created_at: new Date()
+        }
+      ]);
+
+    if (accountError) {
+      console.error("Account creation error:", accountError);
+      // Continue anyway - customer created even if account creation fails
+    }
+
+    const token = generateToken(newCustomer.customer_id, newCustomer.email);
 
     res.status(201).json({
       token,
       user: {
-        id: newUser.id,
-        email: newUser.email,
-        fullName: newUser.full_name,
-        accountNumber: newUser.account_number,
-        accountBalance: newUser.account_balance
+        customerId: newCustomer.customer_id,
+        email: newCustomer.email,
+        name: newCustomer.name,
+        mobileNumber: newCustomer.mobile_number,
+        accountNumber: accountNumber
       }
     });
   } catch (error) {
@@ -68,7 +91,7 @@ export async function register(req, res) {
 }
 
 /**
- * Login user
+ * Login customer
  */
 export async function login(req, res) {
   try {
@@ -80,36 +103,53 @@ export async function login(req, res) {
       });
     }
 
-    // Get user from database
-    const { data: user, error } = await supabase
-      .from("users")
+    // Get customer from database (Team's schema)
+    const { data: customer, error } = await supabase
+      .from("customer")
       .select("*")
       .eq("email", email)
       .single();
 
-    if (error || !user) {
+    if (error) {
+      console.error("Database query error:", error);
+      return res.status(401).json({
+        error: "Invalid email or password",
+        debug: error.message
+      });
+    }
+
+    if (!customer) {
+      console.error("Customer not found for email:", email);
       return res.status(401).json({
         error: "Invalid email or password"
       });
     }
 
     // In production, use bcrypt to compare passwords
-    if (user.password !== password) {
+    if (customer.password !== password) {
       return res.status(401).json({
         error: "Invalid email or password"
       });
     }
 
-    const token = generateToken(user.id, user.email);
+    // Get customer's account
+    const { data: account } = await supabase
+      .from("account")
+      .select("account_number, balance")
+      .eq("customer_id", customer.customer_id)
+      .single();
+
+    const token = generateToken(customer.customer_id, customer.email);
 
     res.json({
       token,
       user: {
-        id: user.id,
-        email: user.email,
-        fullName: user.full_name,
-        accountNumber: user.account_number,
-        accountBalance: user.account_balance
+        customerId: customer.customer_id,
+        email: customer.email,
+        name: customer.name,
+        mobileNumber: customer.mobile_number,
+        accountNumber: account?.account_number || null,
+        accountBalance: account?.balance || 0
       }
     });
   } catch (error) {
@@ -119,30 +159,40 @@ export async function login(req, res) {
 }
 
 /**
- * Get current user profile
+ * Get current customer profile
  */
 export async function getProfile(req, res) {
   try {
-    const userId = req.user.userId;
+    const customerId = req.user.userId;
 
-    const { data: user, error } = await supabase
-      .from("users")
-      .select("id, email, full_name, account_number, account_balance, created_at")
-      .eq("id", userId)
+    const { data: customer, error } = await supabase
+      .from("customer")
+      .select("customer_id, email, name, mobile_number, address, joined_at")
+      .eq("customer_id", customerId)
       .single();
 
-    if (error || !user) {
-      return res.status(404).json({ error: "User not found" });
+    if (error || !customer) {
+      return res.status(404).json({ error: "Customer not found" });
     }
+
+    // Get customer's account
+    const { data: account } = await supabase
+      .from("account")
+      .select("account_number, balance, type")
+      .eq("customer_id", customerId)
+      .single();
 
     res.json({
       user: {
-        id: user.id,
-        email: user.email,
-        fullName: user.full_name,
-        accountNumber: user.account_number,
-        accountBalance: user.account_balance,
-        createdAt: user.created_at
+        customerId: customer.customer_id,
+        email: customer.email,
+        name: customer.name,
+        mobileNumber: customer.mobile_number,
+        address: customer.address,
+        joinedAt: customer.joined_at,
+        accountNumber: account?.account_number || null,
+        accountBalance: account?.balance || 0,
+        accountType: account?.type || null
       }
     });
   } catch (error) {

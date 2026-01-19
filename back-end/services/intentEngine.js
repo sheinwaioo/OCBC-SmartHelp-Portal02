@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import dotenv from "dotenv";
+import supabase from "../supabaseClient.js";
 
 dotenv.config();
 
@@ -7,11 +8,13 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // Simple in-memory cache for intent classification (expires after 1 hour)
 const intentCache = new Map();
+const categoryCache = new Map();
 const CACHE_DURATION = 60 * 60 * 1000; // 1 hour
 
 /**
  * Intent Classification Engine
  * Uses Gemini to understand user intent and maps to structured categories
+ * Fetches categories from Team's enquiry_category table
  * 
  * UX Philosophy:
  * - Minimize user input by auto-detecting intent
@@ -20,6 +23,7 @@ const CACHE_DURATION = 60 * 60 * 1000; // 1 hour
  * - Use caching to reduce API quota usage
  */
 
+// Fallback categories (if database unavailable)
 const CATEGORIES = {
   CARD_SERVICES: "Card Services",
   ACCOUNT_BANKING: "Account & Banking",
@@ -44,6 +48,78 @@ const SUBCATEGORIES = {
     SAVINGS_PLANS: "Savings Plans"
   }
 };
+
+/**
+ * Get categories from Team's enquiry_category table
+ */
+export async function getCategories() {
+  try {
+    // Check cache first
+    if (categoryCache.has("categories") && Date.now() - categoryCache.get("categories").timestamp < CACHE_DURATION) {
+      return categoryCache.get("categories").data;
+    }
+
+    // Fetch from database
+    const { data, error } = await supabase
+      .from("enquiry_category")
+      .select("*")
+      .is("parent_id", null); // Get only main categories
+
+    if (error || !data) {
+      console.warn("Failed to fetch categories, using fallback");
+      return Object.values(CATEGORIES);
+    }
+
+    const categoryNames = data.map(cat => cat.name);
+    categoryCache.set("categories", {
+      data: categoryNames,
+      timestamp: Date.now()
+    });
+
+    return categoryNames;
+  } catch (error) {
+    console.error("Get categories error:", error);
+    return Object.values(CATEGORIES);
+  }
+}
+
+/**
+ * Get subcategories for a category
+ */
+export async function getSubcategories(categoryName) {
+  try {
+    // Find category by name
+    const { data: categoryData, error: catError } = await supabase
+      .from("enquiry_category")
+      .select("enquiry_category_id")
+      .eq("name", categoryName)
+      .single();
+
+    if (catError || !categoryData) {
+      console.warn("Category not found:", categoryName);
+      return SUBCATEGORIES[categoryName] || {};
+    }
+
+    // Get subcategories (where parent_id matches this category)
+    const { data: subcats, error } = await supabase
+      .from("enquiry_category")
+      .select("name")
+      .eq("parent_id", categoryData.enquiry_category_id);
+
+    if (error || !subcats) {
+      console.warn("Subcategories not found for:", categoryName);
+      return SUBCATEGORIES[categoryName] || {};
+    }
+
+    return subcats.reduce((acc, subcat) => {
+      acc[subcat.name.toUpperCase().replace(/ /g, "_")] = subcat.name;
+      return acc;
+    }, {});
+  } catch (error) {
+    console.error("Get subcategories error:", error);
+    return SUBCATEGORIES[categoryName] || {};
+  }
+}
 
 /**
  * Classify user intent using Gemini

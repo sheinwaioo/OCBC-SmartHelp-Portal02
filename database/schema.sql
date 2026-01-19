@@ -1,44 +1,146 @@
--- OCBC SmartHelp Database Setup
--- Run these SQL scripts in Supabase to create the required tables
+-- =============================================
+-- OCBC SmartHelp Database Setup - Team Schema Aligned
+-- Integrates with Team's existing database structure
+-- =============================================
 
 -- =============================================
--- Users Table
+-- TEAM'S TABLES (Use as provided)
 -- =============================================
-CREATE TABLE IF NOT EXISTS users (
+
+-- =============================================
+-- Customer Table (Team's)
+-- =============================================
+CREATE TABLE IF NOT EXISTS customer (
+  customer_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  mobile_number TEXT,
+  address TEXT,
+  email TEXT UNIQUE NOT NULL,
+  password TEXT NOT NULL,
+  pin_number TEXT,
+  joined_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  TotpSecret TEXT,
+  IsMfaVerified BOOLEAN DEFAULT FALSE
+);
+
+-- =============================================
+-- Enquiry Category Table (Team's - Hierarchical)
+-- =============================================
+CREATE TABLE IF NOT EXISTS enquiry_category (
+  enquiry_category_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  parent_id UUID REFERENCES enquiry_category(enquiry_category_id) ON DELETE SET NULL
+);
+
+-- Seed main categories
+INSERT INTO enquiry_category (enquiry_category_id, name, parent_id) 
+VALUES 
+  ('550e8400-e29b-41d4-a716-446655440001', 'Card Services', NULL),
+  ('550e8400-e29b-41d4-a716-446655440002', 'Account & Banking', NULL),
+  ('550e8400-e29b-41d4-a716-446655440003', 'Loan & Finances', NULL)
+ON CONFLICT DO NOTHING;
+
+-- Seed subcategories
+INSERT INTO enquiry_category (enquiry_category_id, name, parent_id) 
+VALUES 
+  ('550e8400-e29b-41d4-a716-446655440011', 'Report Lost Card', '550e8400-e29b-41d4-a716-446655440001'),
+  ('550e8400-e29b-41d4-a716-446655440012', 'Manage Card Limit', '550e8400-e29b-41d4-a716-446655440001'),
+  ('550e8400-e29b-41d4-a716-446655440013', 'Link Account to Card', '550e8400-e29b-41d4-a716-446655440001'),
+  ('550e8400-e29b-41d4-a716-446655440014', 'Lock / Unlock Card', '550e8400-e29b-41d4-a716-446655440001'),
+  ('550e8400-e29b-41d4-a716-446655440021', 'Reset Login PIN', '550e8400-e29b-41d4-a716-446655440002'),
+  ('550e8400-e29b-41d4-a716-446655440022', 'Check Balance', '550e8400-e29b-41d4-a716-446655440002'),
+  ('550e8400-e29b-41d4-a716-446655440023', 'Update Personal Details', '550e8400-e29b-41d4-a716-446655440002'),
+  ('550e8400-e29b-41d4-a716-446655440031', 'Loan Inquiry', '550e8400-e29b-41d4-a716-446655440003'),
+  ('550e8400-e29b-41d4-a716-446655440032', 'Investment Advisory', '550e8400-e29b-41d4-a716-446655440003'),
+  ('550e8400-e29b-41d4-a716-446655440033', 'Savings Plans', '550e8400-e29b-41d4-a716-446655440003')
+ON CONFLICT DO NOTHING;
+
+-- =============================================
+-- Enquiry Table (Team's)
+-- =============================================
+CREATE TABLE IF NOT EXISTS enquiry (
+  enquiry_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  customer_id UUID NOT NULL REFERENCES customer(customer_id) ON DELETE CASCADE,
+  category_id UUID REFERENCES enquiry_category(enquiry_category_id),
+  description TEXT,
+  image_url TEXT,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  status TEXT DEFAULT 'open',
+  resolution_method TEXT
+);
+
+-- =============================================
+-- Account Table (Team's)
+-- =============================================
+CREATE TABLE IF NOT EXISTS account (
+  account_number TEXT PRIMARY KEY,
+  customer_id UUID NOT NULL REFERENCES customer(customer_id) ON DELETE CASCADE,
+  balance NUMERIC,
+  transaction_limit NUMERIC,
+  type TEXT,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =============================================
+-- Card Table (Team's)
+-- =============================================
+CREATE TABLE IF NOT EXISTS card (
+  card_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  customer_id UUID NOT NULL REFERENCES customer(customer_id) ON DELETE CASCADE,
+  account_id TEXT REFERENCES account(account_number) ON DELETE SET NULL,
+  cardlast_4 TEXT,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  type TEXT,
+  is_active BOOLEAN DEFAULT TRUE,
+  transfer_limit NUMERIC
+);
+
+-- =============================================
+-- OUR CUSTOM TABLES (Your Features)
+-- =============================================
+
+-- =============================================
+-- Consultations Table (QR Code Check-ins)
+-- =============================================
+CREATE TABLE IF NOT EXISTS consultations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  email VARCHAR(255) UNIQUE NOT NULL,
-  password VARCHAR(255) NOT NULL, -- In production, use bcrypt hashed passwords
-  full_name VARCHAR(255) NOT NULL,
+  customer_id UUID NOT NULL REFERENCES customer(customer_id) ON DELETE CASCADE,
+  enquiry_id UUID REFERENCES enquiry(enquiry_id) ON DELETE SET NULL,
+  consultation_id VARCHAR(50) UNIQUE NOT NULL,
+  qr_data JSONB,
+  qr_code_image TEXT,
+  preferred_branch VARCHAR(255),
+  status VARCHAR(50) DEFAULT 'scheduled',
+  feedback TEXT,
+  rating INTEGER,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  completed_at TIMESTAMP
+);
+
+-- =============================================
+-- Callbacks Table (Callback Scheduling)
+-- =============================================
+CREATE TABLE IF NOT EXISTS callbacks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  customer_id UUID NOT NULL REFERENCES customer(customer_id) ON DELETE CASCADE,
+  enquiry_id UUID NOT NULL REFERENCES enquiry(enquiry_id) ON DELETE CASCADE,
+  scheduled_time TIMESTAMP NOT NULL,
   phone_number VARCHAR(20),
-  account_number VARCHAR(20) UNIQUE,
-  account_balance DECIMAL(15, 2) DEFAULT 50000.00,
-  tier VARCHAR(50) DEFAULT 'STANDARD', -- STANDARD, PREMIER, PRIVATE
+  status VARCHAR(50) DEFAULT 'scheduled',
+  notes TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  completed_at TIMESTAMP,
+  cancelled_at TIMESTAMP
 );
 
 -- =============================================
--- Enquiries Table
--- =============================================
-CREATE TABLE IF NOT EXISTS enquiries (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  category VARCHAR(100) NOT NULL, -- Card Services, Account & Banking, etc.
-  subcategory VARCHAR(100) NOT NULL,
-  status VARCHAR(50) DEFAULT 'open', -- open, in_progress, resolved, closed
-  details JSONB,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- =============================================
--- Queue Entries Table
+-- Queue Entries Table (Online Queue System)
 -- =============================================
 CREATE TABLE IF NOT EXISTS queue_entries (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  enquiry_id UUID NOT NULL REFERENCES enquiries(id) ON DELETE CASCADE,
-  status VARCHAR(50) DEFAULT 'waiting', -- waiting, in_progress, completed, cancelled
+  customer_id UUID NOT NULL REFERENCES customer(customer_id) ON DELETE CASCADE,
+  enquiry_id UUID NOT NULL REFERENCES enquiry(enquiry_id) ON DELETE CASCADE,
+  status VARCHAR(50) DEFAULT 'waiting',
   position INTEGER,
   estimated_wait_minutes INTEGER,
   joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -48,78 +150,54 @@ CREATE TABLE IF NOT EXISTS queue_entries (
 );
 
 -- =============================================
--- Callbacks Table
--- =============================================
-CREATE TABLE IF NOT EXISTS callbacks (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  enquiry_id UUID NOT NULL REFERENCES enquiries(id) ON DELETE CASCADE,
-  scheduled_time TIMESTAMP NOT NULL,
-  phone_number VARCHAR(20),
-  status VARCHAR(50) DEFAULT 'scheduled', -- scheduled, in_progress, completed, cancelled, no_show
-  notes TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  completed_at TIMESTAMP,
-  cancelled_at TIMESTAMP
-);
-
--- =============================================
--- Consultations Table
--- =============================================
-CREATE TABLE IF NOT EXISTS consultations (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  enquiry_id UUID REFERENCES enquiries(id) ON DELETE SET NULL,
-  consultation_id VARCHAR(50) UNIQUE NOT NULL,
-  qr_data JSONB,
-  qr_code_image TEXT, -- Base64-encoded PNG QR code image (added for QR feature)
-  preferred_branch VARCHAR(255),
-  status VARCHAR(50) DEFAULT 'scheduled', -- scheduled, in_progress, completed, cancelled
-  feedback TEXT,
-  rating INTEGER, -- 1-5 star rating
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  completed_at TIMESTAMP
-);
-
--- =============================================
 -- Indexes for Performance
 -- =============================================
-CREATE INDEX idx_enquiries_user_id ON enquiries(user_id);
-CREATE INDEX idx_enquiries_status ON enquiries(status);
-CREATE INDEX idx_queue_entries_user_id ON queue_entries(user_id);
-CREATE INDEX idx_queue_entries_status ON queue_entries(status);
-CREATE INDEX idx_callbacks_user_id ON callbacks(user_id);
-CREATE INDEX idx_callbacks_status ON callbacks(status);
-CREATE INDEX idx_consultations_user_id ON consultations(user_id);
-CREATE INDEX idx_consultations_status ON consultations(status);
+CREATE INDEX IF NOT EXISTS idx_customer_email ON customer(email);
+CREATE INDEX IF NOT EXISTS idx_enquiry_customer_id ON enquiry(customer_id);
+CREATE INDEX IF NOT EXISTS idx_enquiry_category_id ON enquiry(category_id);
+CREATE INDEX IF NOT EXISTS idx_enquiry_status ON enquiry(status);
+CREATE INDEX IF NOT EXISTS idx_account_customer_id ON account(customer_id);
+CREATE INDEX IF NOT EXISTS idx_card_customer_id ON card(customer_id);
+CREATE INDEX IF NOT EXISTS idx_consultations_customer_id ON consultations(customer_id);
+CREATE INDEX IF NOT EXISTS idx_callbacks_customer_id ON callbacks(customer_id);
+CREATE INDEX IF NOT EXISTS idx_queue_entries_customer_id ON queue_entries(customer_id);
 
 -- =============================================
--- Seed Data (Optional - Demo Users)
+-- Demo Data
 -- =============================================
-INSERT INTO users (email, password, full_name, phone_number, account_number, account_balance, tier)
+INSERT INTO customer (customer_id, email, password, name, mobile_number, address, pin_number, joined_at)
 VALUES 
-  ('john@example.com', 'password123', 'John Doe', '+65 9123 4567', 'OCBC001234567890', 50000.00, 'PREMIER'),
-  ('jane@example.com', 'password123', 'Jane Smith', '+65 9234 5678', 'OCBC009876543210', 75000.00, 'STANDARD')
-ON CONFLICT (email) DO NOTHING;
+  ('550e8400-e29b-41d4-a716-000000000001', 'john@example.com', 'password123', 'John Doe', '+65 9123 4567', '123 Main St', '1234', CURRENT_TIMESTAMP),
+  ('550e8400-e29b-41d4-a716-000000000002', 'jane@example.com', 'password123', 'Jane Smith', '+65 9234 5678', '456 Oak Ave', '5678', CURRENT_TIMESTAMP)
+ON CONFLICT DO NOTHING;
+
+-- Demo accounts
+INSERT INTO account (account_number, customer_id, balance, transaction_limit, type, created_at)
+VALUES 
+  ('OCBC001234567890', '550e8400-e29b-41d4-a716-000000000001', 50000.00, 100000.00, 'SAVINGS', CURRENT_TIMESTAMP),
+  ('OCBC009876543210', '550e8400-e29b-41d4-a716-000000000002', 75000.00, 150000.00, 'CURRENT', CURRENT_TIMESTAMP)
+ON CONFLICT DO NOTHING;
 
 -- =============================================
--- Enable Row Level Security (Optional but recommended)
+-- Enable Row Level Security (Optional)
 -- =============================================
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE enquiries ENABLE ROW LEVEL SECURITY;
-ALTER TABLE queue_entries ENABLE ROW LEVEL SECURITY;
-ALTER TABLE callbacks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE customer ENABLE ROW LEVEL SECURITY;
+ALTER TABLE enquiry ENABLE ROW LEVEL SECURITY;
+ALTER TABLE account ENABLE ROW LEVEL SECURITY;
+ALTER TABLE card ENABLE ROW LEVEL SECURITY;
 ALTER TABLE consultations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE callbacks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE queue_entries ENABLE ROW LEVEL SECURITY;
 
 -- =============================================
--- RLS Policies (Optional - customize based on your needs)
+-- RLS Policies
 -- =============================================
--- Users can only view their own profile
-CREATE POLICY "Users can view own data" ON users
-  FOR SELECT USING (auth.uid()::text = id::text);
+-- Customers can only view their own data
+DROP POLICY IF EXISTS "Customers can view own data" ON customer;
+CREATE POLICY "Customers can view own data" ON customer
+  FOR SELECT USING (auth.uid()::text = customer_id::text);
 
--- Users can only view their own enquiries
-CREATE POLICY "Users can view own enquiries" ON enquiries
-  FOR SELECT USING (auth.uid()::text = user_id::text);
-
--- Similar policies for other tables...
+-- Customers can only view their own enquiries
+DROP POLICY IF EXISTS "Customers can view own enquiries" ON enquiry;
+CREATE POLICY "Customers can view own enquiries" ON enquiry
+  FOR SELECT USING (auth.uid()::text = customer_id::text)

@@ -43,8 +43,8 @@ export async function chatWithAI(req, res) {
       return res.status(400).json({ error: "Message is required" });
     }
 
-    const userId = req.user?.userId; // From auth middleware
-    const isLoggedIn = !!userId;
+    const customerId = req.user?.userId; // From auth middleware
+    const isLoggedIn = !!customerId;
 
     // Classify intent from user message
     const intent = await classifyIntent(message);
@@ -84,21 +84,22 @@ export async function chatWithAI(req, res) {
     }
 
     // Step 2: Detect or prompt for subcategory
+    // Don't auto-detect - always let user choose explicitly
     if (!newState.subcategory && newState.category !== "unknown") {
-      // Try to extract subcategory from user message if confidence is high
+      // Store detected subcategory for later use if needed
       if (intent.subcategory && intent.confidence > 0.7) {
-        newState.subcategory = intent.subcategory;
+        newState.detectedSubcategory = intent.subcategory;
       }
     }
 
     // Step 3: Generate response based on current flow state
     let flowStep = getFlowStep(newState.category, newState.subcategory);
 
-    // Create enquiry if identified
+    // Create enquiry if identified (use customer_id if logged in)
     if (newState.category && newState.subcategory && !newState.enquiryId && isLoggedIn) {
       try {
-        const enquiry = await createEnquiry(userId, newState.category, newState.subcategory);
-        newState.enquiryId = enquiry.id;
+        const enquiry = await createEnquiry(customerId, newState.category, newState.subcategory);
+        newState.enquiryId = enquiry?.enquiry_id;
       } catch (error) {
         console.error("Failed to create enquiry:", error);
       }
@@ -141,7 +142,7 @@ export async function chatWithAI(req, res) {
       }
     } else if (message.toLowerCase().includes("queue")) {
       if (isLoggedIn) {
-        const queuePos = await getQueuePosition(userId);
+        const queuePos = await getQueuePosition(customerId);
         if (queuePos) {
           response.message = `You are in position ${queuePos.position}. Estimated wait time: ${queuePos.estimatedWaitTime} minutes.`;
           response.options = [
@@ -229,8 +230,8 @@ export async function chatWithAI(req, res) {
  */
 export async function requestConsultationQR(req, res) {
   try {
-    const userId = req.user?.userId;
-    if (!userId) {
+    const customerId = req.user?.userId;
+    if (!customerId) {
       return res.status(401).json({ error: "Login required" });
     }
 
@@ -243,15 +244,15 @@ export async function requestConsultationQR(req, res) {
       }
       
       try {
-        const enquiry = await createEnquiry(userId, category, subcategory);
-        enquiryId = enquiry.id;
+        const enquiry = await createEnquiry(customerId, category, subcategory);
+        enquiryId = enquiry.enquiry_id;
       } catch (err) {
         console.error("Failed to create enquiry:", err);
         return res.status(500).json({ error: "Failed to create enquiry" });
       }
     }
 
-    const result = await generateConsultationQR(userId, enquiryId, branch);
+    const result = await generateConsultationQR(customerId, enquiryId, branch);
     res.json(result);
   } catch (error) {
     console.error("Generate QR error:", error);
@@ -264,21 +265,21 @@ export async function requestConsultationQR(req, res) {
  */
 export async function handleQueueAction(req, res) {
   try {
-    const userId = req.user?.userId;
-    if (!userId) {
+    const customerId = req.user?.userId;
+    if (!customerId) {
       return res.status(401).json({ error: "Login required" });
     }
 
     const { action, enquiryId } = req.body;
 
     if (action === "join") {
-      const result = await joinQueue(userId, enquiryId, "", "");
+      const result = await joinQueue(customerId, enquiryId, "", "");
       return res.json(result);
     } else if (action === "leave") {
-      const result = await leaveQueue(userId);
+      const result = await leaveQueue(customerId);
       return res.json(result);
     } else if (action === "position") {
-      const position = await getQueuePosition(userId);
+      const position = await getQueuePosition(customerId);
       return res.json({ queuePosition: position });
     }
 
@@ -294,8 +295,8 @@ export async function handleQueueAction(req, res) {
  */
 export async function handleCallbackRequest(req, res) {
   try {
-    const userId = req.user?.userId;
-    if (!userId) {
+    const customerId = req.user?.userId;
+    if (!customerId) {
       return res.status(401).json({ error: "Login required" });
     }
 
@@ -305,7 +306,7 @@ export async function handleCallbackRequest(req, res) {
       return res.status(400).json({ error: "Enquiry ID and preferred time are required" });
     }
 
-    const result = await scheduleCallback(userId, enquiryId, preferredTime, phoneNumber);
+    const result = await scheduleCallback(customerId, enquiryId, preferredTime, phoneNumber);
     res.json(result);
   } catch (error) {
     console.error("Callback request error:", error);

@@ -16,13 +16,13 @@ const AVG_HANDLING_TIME_MINUTES = 8; // Average agent handling time
 /**
  * Join queue for online agent support
  */
-export async function joinQueue(userId, enquiryId, category, subcategory) {
+export async function joinQueue(customerId, enquiryId, category, subcategory) {
   try {
-    // Check if user already in queue
+    // Check if customer already in queue
     const { data: existing } = await supabase
       .from("queue_entries")
       .select("*")
-      .eq("user_id", userId)
+      .eq("customer_id", customerId)
       .eq("status", "waiting")
       .single();
 
@@ -44,7 +44,7 @@ export async function joinQueue(userId, enquiryId, category, subcategory) {
       .from("queue_entries")
       .insert([
         {
-          user_id: userId,
+          customer_id: customerId,
           enquiry_id: enquiryId,
           status: "waiting",
           position,
@@ -70,14 +70,14 @@ export async function joinQueue(userId, enquiryId, category, subcategory) {
 }
 
 /**
- * Get queue position for user
+ * Get queue position for customer
  */
-export async function getQueuePosition(userId) {
+export async function getQueuePosition(customerId) {
   try {
     const { data: entry, error } = await supabase
       .from("queue_entries")
       .select("*")
-      .eq("user_id", userId)
+      .eq("customer_id", customerId)
       .eq("status", "waiting")
       .single();
 
@@ -109,12 +109,12 @@ export async function getQueuePosition(userId) {
 /**
  * Leave queue
  */
-export async function leaveQueue(userId) {
+export async function leaveQueue(customerId) {
   try {
     const { error } = await supabase
       .from("queue_entries")
       .update({ status: "cancelled", cancelled_at: new Date() })
-      .eq("user_id", userId)
+      .eq("customer_id", customerId)
       .eq("status", "waiting");
 
     if (error) throw error;
@@ -138,7 +138,7 @@ export async function leaveQueue(userId) {
  * Schedule callback
  * UX Refinement: Offer preferred time slots
  */
-export async function scheduleCallback(userId, enquiryId, preferredTime, phoneNumber = null) {
+export async function scheduleCallback(customerId, enquiryId, preferredTime, phoneNumber = null) {
   try {
     // Validate preferred time is in future
     const scheduledTime = new Date(preferredTime);
@@ -150,7 +150,7 @@ export async function scheduleCallback(userId, enquiryId, preferredTime, phoneNu
     const { data: existing } = await supabase
       .from("callbacks")
       .select("*")
-      .eq("user_id", userId)
+      .eq("customer_id", customerId)
       .eq("status", "scheduled")
       .single();
 
@@ -158,15 +158,15 @@ export async function scheduleCallback(userId, enquiryId, preferredTime, phoneNu
       return { success: false, error: "You already have a scheduled callback" };
     }
 
-    // Get user phone if not provided
-    let userPhone = phoneNumber;
-    if (!userPhone) {
-      const { data: user } = await supabase
-        .from("users")
-        .select("phone_number")
-        .eq("id", userId)
+    // Get customer phone if not provided
+    let customerPhone = phoneNumber;
+    if (!customerPhone) {
+      const { data: customer } = await supabase
+        .from("customer")
+        .select("mobile_number")
+        .eq("customer_id", customerId)
         .single();
-      userPhone = user?.phone_number;
+      customerPhone = customer?.mobile_number;
     }
 
     // Create callback entry
@@ -174,10 +174,10 @@ export async function scheduleCallback(userId, enquiryId, preferredTime, phoneNu
       .from("callbacks")
       .insert([
         {
-          user_id: userId,
+          customer_id: customerId,
           enquiry_id: enquiryId,
           scheduled_time: scheduledTime,
-          phone_number: userPhone,
+          phone_number: customerPhone,
           status: "scheduled",
           created_at: new Date()
         }
@@ -200,14 +200,14 @@ export async function scheduleCallback(userId, enquiryId, preferredTime, phoneNu
 }
 
 /**
- * Get user's callbacks
+ * Get customer's callbacks
  */
-export async function getUserCallbacks(userId, status = "scheduled") {
+export async function getUserCallbacks(customerId, status = "scheduled") {
   try {
     const { data, error } = await supabase
       .from("callbacks")
       .select("*")
-      .eq("user_id", userId)
+      .eq("customer_id", customerId)
       .eq("status", status)
       .order("scheduled_time", { ascending: true });
 
@@ -222,13 +222,13 @@ export async function getUserCallbacks(userId, status = "scheduled") {
 /**
  * Cancel callback
  */
-export async function cancelCallback(callbackId, userId) {
+export async function cancelCallback(callbackId, customerId) {
   try {
     const { data: callback } = await supabase
       .from("callbacks")
       .select("*")
       .eq("id", callbackId)
-      .eq("user_id", userId)
+      .eq("customer_id", customerId)
       .single();
 
     if (!callback) {

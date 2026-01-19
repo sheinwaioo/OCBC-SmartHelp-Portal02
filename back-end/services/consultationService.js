@@ -16,7 +16,7 @@ import QRCode from "qrcode";
  * Generate QR code data and create consultation booking
  * Generates actual QR code image with consultation details
  */
-export async function generateConsultationQR(userId, enquiryId, preferredBranch = null) {
+export async function generateConsultationQR(customerId, enquiryId, preferredBranch = null) {
   try {
     // Generate unique consultation ID with ENQ prefix
     const timestamp = Date.now().toString().slice(-4);
@@ -30,7 +30,7 @@ export async function generateConsultationQR(userId, enquiryId, preferredBranch 
     // Store full data for reference
     const qrData = {
       consultationId,
-      userId,
+      customerId,
       timestamp: new Date().toISOString(),
       branch: preferredBranch || "Main Branch",
       url: qrUrl
@@ -54,7 +54,7 @@ export async function generateConsultationQR(userId, enquiryId, preferredBranch 
       .from("consultations")
       .insert([
         {
-          user_id: userId,
+          customer_id: customerId,
           enquiry_id: enquiryId,
           consultation_id: consultationId,
           qr_data: JSON.stringify(qrData),
@@ -108,20 +108,20 @@ export async function getConsultation(consultationId) {
 }
 
 /**
- * Get user's consultations
+ * Get customer's consultations
  */
-export async function getUserConsultations(userId) {
+export async function getUserConsultations(customerId) {
   try {
     const { data, error } = await supabase
       .from("consultations")
       .select("*")
-      .eq("user_id", userId)
+      .eq("customer_id", customerId)
       .order("created_at", { ascending: false });
 
     if (error) throw error;
     return data || [];
   } catch (error) {
-    console.error("Get user consultations error:", error);
+    console.error("Get customer consultations error:", error);
     return [];
   }
 }
@@ -129,7 +129,7 @@ export async function getUserConsultations(userId) {
 /**
  * Submit consultation feedback
  */
-export async function submitConsultationFeedback(consultationId, userId, feedback) {
+export async function submitConsultationFeedback(consultationId, customerId, feedback) {
   try {
     const { data, error } = await supabase
       .from("consultations")
@@ -140,7 +140,7 @@ export async function submitConsultationFeedback(consultationId, userId, feedbac
         completed_at: new Date()
       })
       .eq("id", consultationId)
-      .eq("user_id", userId)
+      .eq("customer_id", customerId)
       .select()
       .single();
 

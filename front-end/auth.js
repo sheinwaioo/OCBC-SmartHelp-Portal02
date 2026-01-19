@@ -85,8 +85,9 @@ async function handleLogin() {
 
     currentUser = response.user;
     localStorage.setItem("userData", JSON.stringify(currentUser));
+    localStorage.setItem("customerId", response.user.customerId);
 
-    showNotification(`Welcome back, ${currentUser.fullName}!`, "success");
+    showNotification(`Welcome back, ${currentUser.name}!`, "success");
 
     // Reset form and close modal
     document.getElementById("login-form").querySelector("form").reset();
@@ -100,15 +101,16 @@ async function handleLogin() {
 }
 
 /**
- * Handle register
+ * Handle register (Team Schema)
  */
 async function handleRegister() {
-  const fullName = document.getElementById("register-name").value;
+  const name = document.getElementById("register-name").value;
   const email = document.getElementById("register-email").value;
+  const mobileNumber = document.getElementById("register-phone")?.value || null;
   const password = document.getElementById("register-password").value;
   const confirmPassword = document.getElementById("register-confirm").value;
 
-  if (!fullName || !email || !password || !confirmPassword) {
+  if (!name || !email || !password || !confirmPassword) {
     showNotification("Please fill in all fields", "error");
     return;
   }
@@ -126,7 +128,7 @@ async function handleRegister() {
   try {
     const response = await apiCall("/auth/register", {
       method: "POST",
-      body: JSON.stringify({ fullName, email, password })
+      body: JSON.stringify({ name, email, password, mobileNumber })
     });
 
     // Store token and user data
@@ -135,8 +137,9 @@ async function handleRegister() {
 
     currentUser = response.user;
     localStorage.setItem("userData", JSON.stringify(currentUser));
+    localStorage.setItem("customerId", response.user.customerId);
 
-    showNotification(`Welcome to OCBC SmartHelp, ${fullName}!`, "success");
+    showNotification(`Welcome to OCBC SmartHelp, ${name}!`, "success");
 
     // Reset form and close modal
     document.getElementById("register-form").querySelector("form").reset();
@@ -155,6 +158,7 @@ async function handleRegister() {
 function logout() {
   localStorage.removeItem("authToken");
   localStorage.removeItem("userData");
+  localStorage.removeItem("customerId");
   authToken = null;
   currentUser = null;
 
@@ -168,9 +172,6 @@ function logout() {
   }
 }
 
-/**
- * Update auth UI based on login state
- */
 function updateAuthUI(isLoggedIn) {
   const authToggle = document.getElementById("auth-toggle");
   const userProfile = document.getElementById("user-profile");
@@ -182,11 +183,11 @@ function updateAuthUI(isLoggedIn) {
     authToggle.style.display = "none";
     userProfile.style.display = "flex";
 
-    // Update user info
-    const initials = getInitials(currentUser.fullName);
+    // Update user info (Team schema uses 'name' instead of 'fullName')
+    const initials = getInitials(currentUser.name || currentUser.fullName);
     document.getElementById("user-tier").textContent = "PREMIER";
     document.getElementById("user-avatar").textContent = initials;
-    document.getElementById("user-name").textContent = currentUser.fullName.split(" ")[0];
+    document.getElementById("user-name").textContent = (currentUser.name || currentUser.fullName || "User").split(" ")[0];
 
     // Show dashboard content
     if (welcomeCard) welcomeCard.style.display = "flex";
