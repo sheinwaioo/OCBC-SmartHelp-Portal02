@@ -156,19 +156,6 @@ function handleSuggestedAction(action, options = []) {
 function showQuickReplies(replies) {
   const chatMessages = document.getElementById("chat-messages");
   
-  // Check if quick replies with same buttons already exist (deduplication)
-  const existingQuickReplies = chatMessages.querySelectorAll(".quick-replies");
-  if (existingQuickReplies.length > 0) {
-    const lastQuickReply = existingQuickReplies[existingQuickReplies.length - 1];
-    const lastButtons = Array.from(lastQuickReply.querySelectorAll("button")).map(btn => btn.textContent);
-    const isSameSet = replies.every(reply => lastButtons.includes(reply));
-    
-    if (isSameSet) {
-      console.warn("Duplicate quick replies prevented");
-      return;
-    }
-  }
-  
   const quickRepliesContainer = document.createElement("div");
   quickRepliesContainer.className = "quick-replies";
 
@@ -499,15 +486,6 @@ function addUserMessage(text) {
  */
 function addBotMessage(text) {
   const chatMessages = document.getElementById("chat-messages");
-  
-  // Check if this exact message already exists (deduplication)
-  const existingMessages = Array.from(chatMessages.querySelectorAll(".chat-message.ai"));
-  const messageAlreadyExists = existingMessages.some(msg => msg.textContent.includes(text));
-  
-  if (messageAlreadyExists) {
-    console.warn("Duplicate message prevented:", text.substring(0, 50));
-    return;
-  }
   
   const messageDiv = document.createElement("div");
   messageDiv.className = "chat-message ai";
