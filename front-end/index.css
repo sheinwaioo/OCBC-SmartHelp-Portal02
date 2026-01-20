@@ -1897,6 +1897,11 @@ main {
   border-color: #cbd5e1;
 }
 
+.calendar-date-button:focus-visible {
+  outline: 3px solid #ef2b2d;
+  outline-offset: 2px;
+}
+
 .calendar-date-button.selected {
   background: #ef2b2d;
   border-color: #ef2b2d;
@@ -1956,6 +1961,11 @@ main {
   transform: translateY(-2px);
 }
 
+.time-slot-button:focus-visible {
+  outline: 3px solid #ef2b2d;
+  outline-offset: 2px;
+}
+
 /* CALLBACK CONFIRMATION FORM */
 .callback-confirmation-form {
   background: #ffffff;
@@ -2013,6 +2023,12 @@ main {
   box-shadow: 0 0 0 3px rgba(239, 43, 45, 0.1);
 }
 
+.form-input:focus-visible {
+  outline: 3px solid #ef2b2d;
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
 .form-input[readonly] {
   background: #f8fafc;
   cursor: not-allowed;
@@ -2038,6 +2054,13 @@ main {
   font-size: 14px;
   font-weight: 600;
   transition: all 0.2s;
+  cursor: pointer;
+}
+
+.btn-confirm:focus-visible,
+.btn-cancel:focus-visible {
+  outline: 3px solid #0f172a;
+  outline-offset: 2px;
 }
 
 .btn-confirm {

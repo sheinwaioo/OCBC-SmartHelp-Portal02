@@ -642,6 +642,28 @@ function displayCallbackCalendar(slotsByDate) {
       displayTimeSlots(dateData.slots, dateKey);
     });
     
+    // Add keyboard navigation: arrow keys to move between dates
+    dateButton.addEventListener("keydown", (e) => {
+      const allButtons = Array.from(document.querySelectorAll(".calendar-date-button"));
+      const currentIndex = allButtons.indexOf(dateButton);
+      
+      if (e.key === "ArrowRight" && currentIndex < allButtons.length - 1) {
+        e.preventDefault();
+        allButtons[currentIndex + 1].focus();
+      } else if (e.key === "ArrowLeft" && currentIndex > 0) {
+        e.preventDefault();
+        allButtons[currentIndex - 1].focus();
+      } else if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        // Select the date
+        document.querySelectorAll(".calendar-date-button").forEach(btn => {
+          btn.classList.remove("selected");
+        });
+        dateButton.classList.add("selected");
+        displayTimeSlots(dateData.slots, dateKey);
+      }
+    });
+    
     datesContainer.appendChild(dateButton);
   });
   
@@ -682,6 +704,31 @@ function displayTimeSlots(slots, selectedDate) {
     timeButton.addEventListener("click", () => {
       // Show confirmation form
       showCallbackConfirmationForm(slot.value, selectedDate, slot.time);
+    });
+    
+    // Add keyboard navigation: arrow keys and Enter/Space for time selection
+    timeButton.addEventListener("keydown", (e) => {
+      const allTimeButtons = Array.from(document.querySelectorAll(".time-slot-button"));
+      const currentIndex = allTimeButtons.indexOf(timeButton);
+      const gridCols = 4; // Assuming 4 columns in grid
+      
+      if (e.key === "ArrowRight" && currentIndex < allTimeButtons.length - 1) {
+        e.preventDefault();
+        allTimeButtons[currentIndex + 1].focus();
+      } else if (e.key === "ArrowLeft" && currentIndex > 0) {
+        e.preventDefault();
+        allTimeButtons[currentIndex - 1].focus();
+      } else if (e.key === "ArrowDown" && currentIndex + gridCols < allTimeButtons.length) {
+        e.preventDefault();
+        allTimeButtons[currentIndex + gridCols].focus();
+      } else if (e.key === "ArrowUp" && currentIndex - gridCols >= 0) {
+        e.preventDefault();
+        allTimeButtons[currentIndex - gridCols].focus();
+      } else if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        // Select the time
+        showCallbackConfirmationForm(slot.value, selectedDate, slot.time);
+      }
     });
     
     timeSlotsGrid.appendChild(timeButton);
