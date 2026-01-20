@@ -748,9 +748,19 @@ async function showCallbackConfirmationForm(timeValue, date, time) {
     const phoneInput = document.getElementById("callback-phone");
     const phoneNumber = phoneInput.value.trim();
     
+    // Validate phone is not empty
     if (!phoneNumber) {
       alert("Please enter a phone number");
       phoneInput.focus();
+      return;
+    }
+    
+    // Validate phone format (client-side)
+    const phoneRegex = /^[+]?[0-9\s\-()]+$/;
+    if (!phoneRegex.test(phoneNumber)) {
+      alert("Invalid phone number format.\n\nPlease use only:\n• Numbers (0-9)\n• Spaces\n• Plus sign (+)\n• Dashes (-)\n• Parentheses ( )");
+      phoneInput.focus();
+      phoneInput.select();
       return;
     }
     
