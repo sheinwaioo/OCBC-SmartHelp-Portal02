@@ -15,6 +15,40 @@ let lastQRData = null; // Store QR data for modal display
 let chatbotInitialized = false; // Flag to prevent duplicate initialization
 
 /**
+ * Show toast notification
+ * @param {string} title - Toast title
+ * @param {string} message - Toast message
+ * @param {string} type - 'success' or 'error'
+ * @param {number} duration - Duration in ms (default 5000)
+ */
+function showToast(title, message, type = 'success', duration = 5000) {
+  const container = document.getElementById('toast-container');
+  if (!container) return;
+  
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  
+  const icon = type === 'success' ? '✅' : '❌';
+  
+  toast.innerHTML = `
+    <div class="toast-icon">${icon}</div>
+    <div class="toast-content">
+      <div class="toast-title">${title}</div>
+      <div class="toast-message">${message}</div>
+    </div>
+    <button class="toast-close" onclick="this.parentElement.remove()">×</button>
+  `;
+  
+  container.appendChild(toast);
+  
+  // Auto remove after duration
+  setTimeout(() => {
+    toast.classList.add('removing');
+    setTimeout(() => toast.remove(), 300);
+  }, duration);
+}
+
+/**
  * Initialize chatbot on page load
  */
 function initChatbot() {
@@ -710,6 +744,7 @@ async function showCallbackConfirmationForm(timeValue, date, time) {
   
   // Add event listeners
   document.getElementById("confirm-callback-btn").addEventListener("click", () => {
+    const confirmBtn = document.getElementById("confirm-callback-btn");
     const phoneInput = document.getElementById("callback-phone");
     const phoneNumber = phoneInput.value.trim();
     
@@ -719,8 +754,20 @@ async function showCallbackConfirmationForm(timeValue, date, time) {
       return;
     }
     
+    // Disable button and show loading state
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = "Scheduling...";
+    confirmBtn.style.opacity = "0.6";
+    confirmBtn.style.cursor = "not-allowed";
+    
     // Submit callback
-    handleCallbackConfirmation(timeValue, phoneNumber);
+    handleCallbackConfirmation(timeValue, phoneNumber).catch(() => {
+      // Re-enable button on error
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = "Confirm Callback";
+      confirmBtn.style.opacity = "1";
+      confirmBtn.style.cursor = "pointer";
+    });
   });
   
   document.getElementById("cancel-callback-form-btn").addEventListener("click", () => {
@@ -734,11 +781,9 @@ async function showCallbackConfirmationForm(timeValue, date, time) {
  * Handle callback confirmation and submission
  */
 async function handleCallbackConfirmation(timeValue, phoneNumber) {
+  const form = document.querySelector(".callback-confirmation-form");
+  
   try {
-    // Remove form
-    const form = document.querySelector(".callback-confirmation-form");
-    if (form) form.remove();
-    
     addBotMessage("Scheduling your callback...");
     
     const response = await apiCall("/callbacks/schedule", {
@@ -751,6 +796,17 @@ async function handleCallbackConfirmation(timeValue, phoneNumber) {
     });
 
     if (response.success) {
+      // Remove form on success
+      if (form) form.remove();
+      
+      // Show toast notification
+      showToast(
+        'Callback Scheduled!',
+        `We'll call you at ${response.phoneNumber} on ${response.scheduledTime}`,
+        'success',
+        6000
+      );
+      
       addBotMessage(
         `✅ Callback scheduled successfully!\n\n` +
         `📅 Time: ${response.scheduledTime}\n` +
@@ -760,13 +816,32 @@ async function handleCallbackConfirmation(timeValue, phoneNumber) {
       );
       showQuickReplies(["View My Callbacks", "New Enquiry", "Go Back"]);
     } else {
+      // Show error toast
+      showToast(
+        'Scheduling Failed',
+        response.error || "Failed to schedule callback",
+        'error'
+      );
+      
       addBotMessage(`❌ ${response.error || "Failed to schedule callback"}`);
       showQuickReplies(["Try Again", "Go Back"]);
+      throw new Error(response.error); // Trigger catch to re-enable button
     }
   } catch (error) {
     console.error("Callback confirmation error:", error);
+    
+    // Show error toast if not already shown
+    if (!error.message) {
+      showToast(
+        'Scheduling Failed',
+        'Something went wrong. Please try again.',
+        'error'
+      );
+    }
+    
     addBotMessage("Failed to schedule callback. Please try again.");
     showQuickReplies(["Try Again", "Go Back"]);
+    throw error; // Propagate to button handler
   }
 }
 
