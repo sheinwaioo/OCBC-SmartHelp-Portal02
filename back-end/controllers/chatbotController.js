@@ -8,7 +8,9 @@ import {
   mapSelection,
   getAssistanceDetails,
   CATEGORIES,
-  SUBCATEGORIES
+  SUBCATEGORIES,
+  getCategories,
+  getSubcategories
 } from "../services/intentEngine.js";
 import {
   createEnquiry,
@@ -74,7 +76,8 @@ export async function chatWithAI(req, res) {
     if (intent.isGreeting) {
       response.message = "Hello! 👋 Welcome to OCBC SmartHelp. I'm here to assist you with your banking inquiries. What can I help you with today?";
       response.suggestedAction = "select_category";
-      response.options = Object.values(CATEGORIES).map(cat => ({
+      const cats = await getCategories();
+      response.options = cats.map(cat => ({
         text: cat,
         value: cat
       }));
@@ -186,20 +189,17 @@ export async function chatWithAI(req, res) {
         }
       }
     } else if (!newState.category || newState.category === "unknown") {
-      // Initial state or unknown intent - prompt for category
+      // Initial state or unknown intent - prompt for category (fetch from database)
       response.message = "Welcome to OCBC SmartHelp! How can I help you today?";
       response.suggestedAction = "select_category";
-      response.options = Object.values(CATEGORIES).map(cat => ({
+      const cats = await getCategories();
+      response.options = cats.map(cat => ({
         text: cat,
         value: cat
       }));
     } else if (newState.category && !newState.subcategory) {
-      // Show subcategories
-      const categoryKey = newState.category
-        .replace(" & ", "_")
-        .replace(/ /g, "_")
-        .toUpperCase();
-      const subs = SUBCATEGORIES[categoryKey] || {};
+      // Show subcategories (fetch from database)
+      const subs = await getSubcategories(newState.category);
       response.message = `You selected ${newState.category}. What specifically do you need help with?`;
       response.suggestedAction = "select_subcategory";
       response.options = Object.values(subs).map(sub => ({
