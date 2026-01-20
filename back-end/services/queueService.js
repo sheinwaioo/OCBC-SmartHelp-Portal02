@@ -14,6 +14,20 @@ import supabase from "../supabaseClient.js";
 const AVG_HANDLING_TIME_MINUTES = 8; // Average agent handling time
 
 /**
+ * Format datetime in local timezone (without UTC conversion)
+ * This ensures the time stored matches the local time
+ */
+function formatLocalDateTime(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+
+/**
  * Join queue for online agent support
  */
 export async function joinQueue(customerId, enquiryId, category, subcategory) {
@@ -49,7 +63,7 @@ export async function joinQueue(customerId, enquiryId, category, subcategory) {
           status: "waiting",
           position,
           estimated_wait_minutes: estimatedWaitTime,
-          joined_at: new Date()
+          joined_at: formatLocalDateTime(new Date())
         }
       ])
       .select()
@@ -113,7 +127,7 @@ export async function leaveQueue(customerId) {
   try {
     const { error } = await supabase
       .from("queue_entries")
-      .update({ status: "cancelled", cancelled_at: new Date() })
+      .update({ status: "cancelled", cancelled_at: formatLocalDateTime(new Date()) })
       .eq("customer_id", customerId)
       .eq("status", "waiting");
 
@@ -137,6 +151,16 @@ export async function leaveQueue(customerId) {
 /**
  * Schedule callback
  * UX Refinement: Offer preferred time slots
+ * 
+ * Status Flow (per ENQUIRY_STATUS_IMPLEMENTATION):
+ * - Enquiry starts as: submitted (when created)
+ * - When callback is scheduled: status → in-progress (via startService)
+ * - When agent marks resolved: status → resolved, resolution_method → 'agent-online'
+ * 
+ * This is an agent service (not self-service), so:
+ * - Customer CANNOT mark as resolved immediately
+ * - Agent MUST mark as resolved after the call completes
+ * - Resolution method is always 'agent-online' for callbacks
  */
 export async function scheduleCallback(customerId, enquiryId, preferredTime, phoneNumber = null) {
   try {
@@ -145,6 +169,20 @@ export async function scheduleCallback(customerId, enquiryId, preferredTime, pho
     if (scheduledTime < new Date()) {
       return { success: false, error: "Please select a future time" };
     }
+
+    // Format datetime in local timezone (without UTC conversion)
+    // This ensures 10:00 AM selected = 10:00:00 stored in database
+    const formatLocalDateTime = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    };
+
+    const scheduledTimeLocal = formatLocalDateTime(scheduledTime);
 
     // Check for existing scheduled callbacks
     const { data: existing } = await supabase
@@ -169,6 +207,23 @@ export async function scheduleCallback(customerId, enquiryId, preferredTime, pho
       customerPhone = customer?.mobile_number;
     }
 
+    // Validate phone number is present
+    if (!customerPhone || customerPhone.trim() === '') {
+      return { 
+        success: false, 
+        error: "Phone number is required. Please provide a contact number for the callback." 
+      };
+    }
+
+    // Basic phone validation (numbers, spaces, dashes, parentheses, plus)
+    const phoneRegex = /^[+]?[0-9\s\-()]+$/;
+    if (!phoneRegex.test(customerPhone)) {
+      return { 
+        success: false, 
+        error: "Invalid phone number format. Please use only numbers, spaces, and standard phone symbols." 
+      };
+    }
+
     // Create callback entry
     const { data, error } = await supabase
       .from("callbacks")
@@ -176,10 +231,10 @@ export async function scheduleCallback(customerId, enquiryId, preferredTime, pho
         {
           customer_id: customerId,
           enquiry_id: enquiryId,
-          scheduled_time: scheduledTime,
+          scheduled_time: scheduledTimeLocal,
           phone_number: customerPhone,
           status: "scheduled",
-          created_at: new Date()
+          created_at: formatLocalDateTime(new Date())
         }
       ])
       .select()
@@ -187,16 +242,42 @@ export async function scheduleCallback(customerId, enquiryId, preferredTime, pho
 
     if (error) throw error;
 
+    // ✅ Mark enquiry as in-progress
+    // Import startService at top of file if not already imported
+    const { startService } = await import("./enquiryService.js");
+    await startService(enquiryId);
+
+    // TODO: Agent dashboard will later call:
+    // await completeService(enquiryId, "agent-online");
+
     return {
       success: true,
       callback: data,
-      message: `Callback scheduled for ${scheduledTime.toLocaleString()}`,
+      callbackId: data.id,
+      scheduledTime: formatScheduledTime(scheduledTime),
+      phoneNumber: customerPhone,
+      message: `Callback scheduled for ${formatScheduledTime(scheduledTime)}`,
       confirmationCode: generateConfirmationCode()
     };
   } catch (error) {
     console.error("Schedule callback error:", error);
     throw error;
   }
+}
+
+/**
+ * Format scheduled time for display
+ */
+function formatScheduledTime(date) {
+  const options = { 
+    weekday: 'short', 
+    month: 'short', 
+    day: 'numeric', 
+    hour: 'numeric', 
+    minute: '2-digit',
+    hour12: true 
+  };
+  return date.toLocaleString('en-US', options);
 }
 
 /**
@@ -237,7 +318,7 @@ export async function cancelCallback(callbackId, customerId) {
 
     const { error } = await supabase
       .from("callbacks")
-      .update({ status: "cancelled", cancelled_at: new Date() })
+      .update({ status: "cancelled", cancelled_at: formatLocalDateTime(new Date()) })
       .eq("id", callbackId);
 
     if (error) throw error;
@@ -261,27 +342,82 @@ function generateConfirmationCode() {
 
 /**
  * Get available callback time slots
- * UX Enhancement: Provide pre-filled options
+ * UX Enhancement: Provide pre-filled options with readable labels
+ * Returns array of objects with value (ISO) and label (readable)
+ * 
+ * Rules:
+ * - Starts from TOMORROW (not today)
+ * - 7 days from tomorrow
+ * - Hourly slots: 9 AM - 5 PM (9:00, 10:00, 11:00... 17:00)
+ * - Excludes weekends
  */
 export function getCallbackTimeSlots() {
   const slots = [];
   const now = new Date();
+  
+  // Start from tomorrow
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setHours(0, 0, 0, 0);
 
-  // Generate slots for next 7 days, business hours (9 AM - 6 PM)
-  for (let day = 1; day <= 7; day++) {
-    const date = new Date(now);
-    date.setDate(date.getDate() + day);
+  // Generate slots for 7 days starting from tomorrow
+  let daysAdded = 0;
+  let dayOffset = 0;
 
-    // Skip weekends
+  while (daysAdded < 7) {
+    const date = new Date(tomorrow);
+    date.setDate(date.getDate() + dayOffset);
+    dayOffset++;
+
+    // Skip weekends (0 = Sunday, 6 = Saturday)
     if (date.getDay() === 0 || date.getDay() === 6) continue;
+    daysAdded++;
 
-    for (let hour = 9; hour < 18; hour += 2) {
-      date.setHours(hour, 0, 0, 0);
-      if (date > now) {
-        slots.push(date.toISOString());
-      }
+    // Generate hourly time slots from 9 AM to 5 PM
+    for (let hour = 9; hour <= 17; hour++) {
+      const slotTime = new Date(date);
+      slotTime.setHours(hour, 0, 0, 0);
+      
+      const label = formatTimeSlotLabel(slotTime, now);
+      slots.push({
+        value: slotTime.toISOString(),
+        label: label,
+        datetime: slotTime,
+        date: slotTime.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        time: slotTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+      });
     }
   }
 
-  return slots.slice(0, 12); // Return first 12 available slots
+  return slots; // Return all generated slots
+}
+
+/**
+ * Format time slot with friendly labels (Today, Tomorrow, day name)
+ */
+function formatTimeSlotLabel(date, now) {
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+  
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  
+  const slotDate = new Date(date);
+  slotDate.setHours(0, 0, 0, 0);
+  
+  const timeStr = date.toLocaleTimeString('en-US', { 
+    hour: 'numeric', 
+    minute: '2-digit',
+    hour12: true 
+  });
+  
+  if (slotDate.getTime() === today.getTime()) {
+    return `Today, ${timeStr}`;
+  } else if (slotDate.getTime() === tomorrow.getTime()) {
+    return `Tomorrow, ${timeStr}`;
+  } else {
+    const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
+    const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return `${dayName}, ${dateStr} at ${timeStr}`;
+  }
 }

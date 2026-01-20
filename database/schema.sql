@@ -58,6 +58,11 @@ ON CONFLICT DO NOTHING;
 -- =============================================
 -- Enquiry Table (Team's)
 -- =============================================
+-- =============================================
+-- Enquiry Table (with status lifecycle)
+-- Status values: submitted → in-progress → resolved OR inactive
+-- Resolution methods: self-service, agent-online, agent-physical
+-- =============================================
 CREATE TABLE IF NOT EXISTS enquiry (
   enquiry_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   customer_id UUID NOT NULL REFERENCES customer(customer_id) ON DELETE CASCADE,
@@ -65,7 +70,7 @@ CREATE TABLE IF NOT EXISTS enquiry (
   description TEXT,
   image_url TEXT,
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-  status TEXT DEFAULT 'open',
+  status TEXT DEFAULT 'submitted',
   resolution_method TEXT
 );
 
@@ -124,13 +129,13 @@ CREATE TABLE IF NOT EXISTS callbacks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   customer_id UUID NOT NULL REFERENCES customer(customer_id) ON DELETE CASCADE,
   enquiry_id UUID NOT NULL REFERENCES enquiry(enquiry_id) ON DELETE CASCADE,
-  scheduled_time TIMESTAMP NOT NULL,
+  scheduled_time TIMESTAMPTZ NOT NULL,
   phone_number VARCHAR(20),
   status VARCHAR(50) DEFAULT 'scheduled',
   notes TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  completed_at TIMESTAMP,
-  cancelled_at TIMESTAMP
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  completed_at TIMESTAMPTZ,
+  cancelled_at TIMESTAMPTZ
 );
 
 -- =============================================

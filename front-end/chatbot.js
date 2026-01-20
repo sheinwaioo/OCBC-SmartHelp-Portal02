@@ -50,6 +50,7 @@ function initChatbot() {
       "Card Services",
       "Account & Banking",
       "Check Enquiry History",
+      "View Scheduled Callbacks",
       "View Available Consultations"
     ]);
   }
@@ -63,6 +64,34 @@ async function sendChatMessage() {
   const message = userInput.value.trim();
 
   if (!message) return;
+
+  // Handle special commands
+  if (message.toLowerCase().includes("view") && message.toLowerCase().includes("callback")) {
+    userInput.value = "";
+    if (!promptLogin("To view your scheduled callbacks")) return;
+    viewScheduledCallbacks();
+    return;
+  }
+
+  if (message.toLowerCase() === "view scheduled callbacks" || message.toLowerCase() === "my callbacks") {
+    userInput.value = "";
+    if (!promptLogin("To view your scheduled callbacks")) return;
+    viewScheduledCallbacks();
+    return;
+  }
+
+  if (message.startsWith("cancel_callback_")) {
+    const callbackId = message.replace("cancel_callback_", "");
+    userInput.value = "";
+    cancelCallback(callbackId);
+    return;
+  }
+
+  if (message === "Leave Queue & Schedule Callback" || message === "leave_and_callback") {
+    userInput.value = "";
+    handleLeaveQueueAndCallback();
+    return;
+  }
 
   // Add user message to UI
   addUserMessage(message);
@@ -96,14 +125,42 @@ async function sendChatMessage() {
     // Display bot response
     addBotMessage(response.message);
 
-    // Show quick action buttons or options
-    if (response.options && response.options.length > 0) {
-      showOptionsButtons(response.options, response.suggestedAction);
-    }
+    // Handle callback scheduling with new calendar UI
+    if (response.suggestedAction === "select_callback_time") {
+      // Use new calendar UI instead of old button list
+      if (response.options && response.options.length > 0) {
+        // Group slots by date
+        const slotsByDate = {};
+        response.options.forEach(opt => {
+          if (!opt.date) return;
+          
+          if (!slotsByDate[opt.date]) {
+            slotsByDate[opt.date] = {
+              date: opt.date,
+              slots: []
+            };
+          }
+          slotsByDate[opt.date].slots.push({
+            value: opt.value,
+            time: opt.time,
+            label: opt.text,
+            datetime: opt.datetime
+          });
+        });
+        
+        // Display calendar instead of button list
+        displayCallbackCalendar(slotsByDate);
+      }
+    } else {
+      // Show quick action buttons or options for other actions
+      if (response.options && response.options.length > 0) {
+        showOptionsButtons(response.options, response.suggestedAction);
+      }
 
-    // Handle specific actions
-    if (response.suggestedAction) {
-      handleSuggestedAction(response.suggestedAction, response.options);
+      // Handle specific actions
+      if (response.suggestedAction) {
+        handleSuggestedAction(response.suggestedAction, response.options);
+      }
     }
   } catch (error) {
     addBotMessage("I encountered an error processing your request. Please try again.");
@@ -160,10 +217,14 @@ function showQuickReplies(replies) {
   quickRepliesContainer.className = "quick-replies";
 
   replies.forEach(reply => {
-    const button = createButton(reply, reply);
+    // Handle both string and object formats
+    const displayText = typeof reply === 'string' ? reply : reply.text;
+    const buttonValue = typeof reply === 'string' ? reply : reply.value;
+    
+    const button = createButton(displayText, buttonValue);
     
     // Handle "View QR Code" specially
-    if (reply === "View QR Code" || reply === "Download QR Code") {
+    if (displayText === "View QR Code" || displayText === "Download QR Code") {
       button.addEventListener("click", () => {
         if (lastQRData) {
           showQRCodeModal(lastQRData);
@@ -174,7 +235,7 @@ function showQuickReplies(replies) {
     } else {
       button.addEventListener("click", () => {
         const userInput = document.getElementById("user-input");
-        userInput.value = reply;
+        userInput.value = buttonValue;
         sendChatMessage();
       });
     }
@@ -405,43 +466,385 @@ async function handleQueueOrCallback(option) {
 }
 
 /**
- * Display callback time slots
+ * Handle leaving queue and scheduling callback
  */
-function displayCallbackTimeSlots() {
-  addBotMessage("When would you like us to call you?");
+async function handleLeaveQueueAndCallback() {
+  try {
+    if (!isLoggedIn()) {
+      promptLogin("To schedule a callback");
+      return;
+    }
 
-  const slots = [
-    "Today, 2:00 PM",
-    "Today, 3:00 PM",
-    "Tomorrow, 10:00 AM",
-    "Tomorrow, 2:00 PM",
-    "Next Monday, 10:00 AM"
-  ];
+    addBotMessage("Leaving queue...");
+    
+    // Leave the queue
+    const leaveResponse = await apiCall("/queue/leave", {
+      method: "POST",
+      body: JSON.stringify({
+        action: "leave"
+      })
+    });
 
-  showQuickReplies(slots);
+    if (leaveResponse.success) {
+      addBotMessage("You've left the queue. Let's schedule a callback instead.");
+      // Show callback time slots
+      await displayCallbackTimeSlots();
+    } else {
+      addBotMessage("Unable to leave queue. Please try again.");
+      showQuickReplies(["Try Again", "Go Back"]);
+    }
+  } catch (error) {
+    console.error("Leave queue and callback error:", error);
+    addBotMessage("Something went wrong. Please try again.");
+    showQuickReplies(["Try Again", "Go Back"]);
+  }
 }
 
 /**
- * Handle callback time selection
+ * Display callback time slots - fetch from backend
  */
-async function handleCallbackTimeSelection(timeSlot) {
+async function displayCallbackTimeSlots() {
   try {
-    addBotMessage(`Scheduling callback for ${timeSlot}...`);
+    addBotMessage("When would you like us to call you? Please select a date:");
+    
+    // Fetch available slots from backend
+    const response = await apiCall("/chat", {
+      method: "POST",
+      body: JSON.stringify({
+        message: "callback",
+        flowState: chatFlowState
+      })
+    });
 
+    if (response.options && response.options.length > 0) {
+      // Group slots by date
+      const slotsByDate = {};
+      response.options.forEach(opt => {
+        if (!opt.date) return;
+        
+        if (!slotsByDate[opt.date]) {
+          slotsByDate[opt.date] = {
+            date: opt.date,
+            slots: []
+          };
+        }
+        // Store complete slot info for time selection
+        slotsByDate[opt.date].slots.push({
+          value: opt.value,
+          time: opt.time,
+          label: opt.text,
+          datetime: opt.datetime
+        });
+      });
+      
+      // Display calendar with date buttons
+      displayCallbackCalendar(slotsByDate);
+      
+      // Update flow state
+      if (response.flowState) {
+        chatFlowState = response.flowState;
+      }
+    } else {
+      // Fallback if API fails
+      addBotMessage("Unable to load available dates. Please try again.");
+      showQuickReplies(["Try Again", "Go Back"]);
+    }
+  } catch (error) {
+    console.error("Failed to fetch callback slots:", error);
+    addBotMessage("Unable to load available time slots. Please try again.");
+    showQuickReplies(["Try Again", "Go Back"]);
+  }
+}
+
+/**
+ * Display calendar with selectable dates
+ */
+function displayCallbackCalendar(slotsByDate) {
+  const chatMessages = document.getElementById("chat-messages");
+  
+  // Create calendar container
+  const calendarContainer = document.createElement("div");
+  calendarContainer.className = "callback-calendar";
+  calendarContainer.innerHTML = `
+    <div class="calendar-header">Select a Date</div>
+    <div class="calendar-dates"></div>
+  `;
+  
+  const datesContainer = calendarContainer.querySelector(".calendar-dates");
+  
+  // Create date buttons
+  Object.keys(slotsByDate).forEach(dateKey => {
+    const dateData = slotsByDate[dateKey];
+    const dateButton = document.createElement("button");
+    dateButton.className = "calendar-date-button";
+    
+    // Parse date for display - use the first slot's datetime
+    let dateObj = dateData.slots[0]?.datetime;
+    if (typeof dateObj === 'string') {
+      dateObj = new Date(dateObj);
+    }
+    
+    if (!dateObj) {
+      // Fallback: parse from dateKey (e.g., "Jan 21, 2026")
+      dateObj = new Date(dateKey);
+    }
+    
+    const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+    const monthDay = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    
+    dateButton.innerHTML = `
+      <div class="date-day">${dayName}</div>
+      <div class="date-number">${monthDay}</div>
+    `;
+    
+    dateButton.addEventListener("click", () => {
+      // Remove previous selection
+      document.querySelectorAll(".calendar-date-button").forEach(btn => {
+        btn.classList.remove("selected");
+      });
+      dateButton.classList.add("selected");
+      
+      // Show time slots for selected date
+      displayTimeSlots(dateData.slots, dateKey);
+    });
+    
+    datesContainer.appendChild(dateButton);
+  });
+  
+  chatMessages.appendChild(calendarContainer);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+/**
+ * Display time slots for selected date
+ */
+function displayTimeSlots(slots, selectedDate) {
+  // Remove any existing time slot container
+  const existingTimeSlots = document.querySelector(".time-slots-container");
+  if (existingTimeSlots) {
+    existingTimeSlots.remove();
+  }
+  
+  const chatMessages = document.getElementById("chat-messages");
+  
+  const timeSlotsContainer = document.createElement("div");
+  timeSlotsContainer.className = "time-slots-container";
+  timeSlotsContainer.innerHTML = `
+    <div class="time-slots-header">Select a Time</div>
+    <div class="time-slots-grid"></div>
+  `;
+  
+  const timeSlotsGrid = timeSlotsContainer.querySelector(".time-slots-grid");
+  
+  // Create time slot buttons
+  slots.forEach(slot => {
+    const timeButton = document.createElement("button");
+    timeButton.className = "time-slot-button";
+    timeButton.textContent = slot.time;
+    timeButton.dataset.value = slot.value;
+    timeButton.dataset.date = selectedDate;
+    timeButton.dataset.time = slot.time;
+    
+    timeButton.addEventListener("click", () => {
+      // Show confirmation form
+      showCallbackConfirmationForm(slot.value, selectedDate, slot.time);
+    });
+    
+    timeSlotsGrid.appendChild(timeButton);
+  });
+  
+  chatMessages.appendChild(timeSlotsContainer);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+/**
+ * Show callback confirmation form
+ */
+async function showCallbackConfirmationForm(timeValue, date, time) {
+  // Remove existing form if any
+  const existingForm = document.querySelector(".callback-confirmation-form");
+  if (existingForm) {
+    existingForm.remove();
+  }
+  
+  const chatMessages = document.getElementById("chat-messages");
+  
+  // Get customer phone from profile
+  let customerPhone = "";
+  try {
+    const profileResponse = await apiCall("/auth/profile", { method: "GET" });
+    // Prefer the normalized shape { user: { mobileNumber } }, fallback to legacy mobile_number
+    customerPhone = profileResponse?.user?.mobileNumber || profileResponse?.mobile_number || "";
+  } catch (error) {
+    console.error("Failed to fetch profile:", error);
+  }
+  
+  const confirmationForm = document.createElement("div");
+  confirmationForm.className = "callback-confirmation-form";
+  confirmationForm.innerHTML = `
+    <div class="form-header">Confirm Callback Details</div>
+    <div class="form-content">
+      <div class="form-field">
+        <label>Date:</label>
+        <input type="text" class="form-input" value="${date}" readonly />
+      </div>
+      <div class="form-field">
+        <label>Time:</label>
+        <input type="text" class="form-input" value="${time}" readonly />
+      </div>
+      <div class="form-field">
+        <label>Phone Number: <span class="required">*</span></label>
+        <input type="tel" id="callback-phone" class="form-input" value="${customerPhone}" 
+               placeholder="+65 1234 5678" required />
+        <small class="form-hint">Prefilled from your profile; you can edit if needed</small>
+      </div>
+      <div class="form-buttons">
+        <button class="btn-confirm" id="confirm-callback-btn">Confirm Callback</button>
+        <button class="btn-cancel" id="cancel-callback-form-btn">Cancel</button>
+      </div>
+    </div>
+  `;
+  
+  chatMessages.appendChild(confirmationForm);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  
+  // Add event listeners
+  document.getElementById("confirm-callback-btn").addEventListener("click", () => {
+    const phoneInput = document.getElementById("callback-phone");
+    const phoneNumber = phoneInput.value.trim();
+    
+    if (!phoneNumber) {
+      alert("Please enter a phone number");
+      phoneInput.focus();
+      return;
+    }
+    
+    // Submit callback
+    handleCallbackConfirmation(timeValue, phoneNumber);
+  });
+  
+  document.getElementById("cancel-callback-form-btn").addEventListener("click", () => {
+    confirmationForm.remove();
+    addBotMessage("Callback cancelled. Would you like to try again?");
+    showQuickReplies(["Schedule Callback", "Go Back"]);
+  });
+}
+
+/**
+ * Handle callback confirmation and submission
+ */
+async function handleCallbackConfirmation(timeValue, phoneNumber) {
+  try {
+    // Remove form
+    const form = document.querySelector(".callback-confirmation-form");
+    if (form) form.remove();
+    
+    addBotMessage("Scheduling your callback...");
+    
     const response = await apiCall("/callbacks/schedule", {
       method: "POST",
       body: JSON.stringify({
         enquiryId: chatFlowState.enquiryId,
-        preferredTime: new Date().toISOString()
+        preferredTime: timeValue,
+        phoneNumber: phoneNumber
       })
     });
 
     if (response.success) {
-      addBotMessage(`✅ Callback scheduled successfully!\n\nConfirmation code: ${response.confirmationCode}\n\nWe'll call you at ${timeSlot}`);
-      showQuickReplies(["View More Help", "Go Back", "End Chat"]);
+      addBotMessage(
+        `✅ Callback scheduled successfully!\n\n` +
+        `📅 Time: ${response.scheduledTime}\n` +
+        `📞 We'll call: ${response.phoneNumber}\n` +
+        `🔖 Confirmation: ${response.confirmationCode}\n\n` +
+        `Please ensure you're available at the scheduled time.`
+      );
+      showQuickReplies(["View My Callbacks", "New Enquiry", "Go Back"]);
+    } else {
+      addBotMessage(`❌ ${response.error || "Failed to schedule callback"}`);
+      showQuickReplies(["Try Again", "Go Back"]);
     }
   } catch (error) {
+    console.error("Callback confirmation error:", error);
     addBotMessage("Failed to schedule callback. Please try again.");
+    showQuickReplies(["Try Again", "Go Back"]);
+  }
+}
+
+/**
+ * Handle callback time selection (legacy - kept for backward compatibility)
+ * New flow uses calendar + confirmation form instead
+ */
+async function handleCallbackTimeSelection(timeSlot) {
+  // Redirect to new calendar flow
+  displayCallbackTimeSlots();
+}
+
+/**
+ * View customer's scheduled callbacks
+ */
+async function viewScheduledCallbacks() {
+  try {
+    addBotMessage("Fetching your scheduled callbacks...");
+    
+    const response = await apiCall("/callbacks", {
+      method: "GET"
+    });
+
+    if (response.success && response.callbacks && response.callbacks.length > 0) {
+      const callbackList = response.callbacks.map((cb, index) => {
+        const time = new Date(cb.scheduled_time).toLocaleString('en-US', {
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        });
+        return `${index + 1}. 📞 ${time} - ${cb.phone_number}`;
+      }).join('\\n');
+
+      addBotMessage(`Your scheduled callbacks:\\n\\n${callbackList}`);
+      
+      // Create buttons for each callback to cancel
+      const cancelButtons = response.callbacks.map(cb => ({
+        text: `Cancel callback ${new Date(cb.scheduled_time).toLocaleDateString()}`,
+        value: `cancel_callback_${cb.id}`
+      }));
+      
+      showQuickReplies([...cancelButtons, "Go Back"]);
+    } else {
+      addBotMessage("You don't have any scheduled callbacks.");
+      showQuickReplies(["Schedule Callback", "New Enquiry", "Go Back"]);
+    }
+  } catch (error) {
+    console.error("View callbacks error:", error);
+    addBotMessage("Unable to fetch your callbacks. Please try again.");
+    showQuickReplies(["Try Again", "Go Back"]);
+  }
+}
+
+/**
+ * Cancel a specific callback
+ */
+async function cancelCallback(callbackId) {
+  try {
+    addBotMessage("Cancelling your callback...");
+    
+    const response = await apiCall(`/callbacks/${callbackId}`, {
+      method: "DELETE"
+    });
+
+    if (response.success) {
+      addBotMessage("✅ Your callback has been cancelled successfully.");
+      showQuickReplies(["Schedule New Callback", "Join Queue", "Go Back"]);
+    } else {
+      addBotMessage(`❌ ${response.error || "Failed to cancel callback"}`);
+      showQuickReplies(["Try Again", "Go Back"]);
+    }
+  } catch (error) {
+    console.error("Cancel callback error:", error);
+    addBotMessage("Failed to cancel callback. Please try again.");
+    showQuickReplies(["Try Again", "Go Back"]);
   }
 }
 

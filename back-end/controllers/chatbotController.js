@@ -158,11 +158,15 @@ export async function chatWithAI(req, res) {
       } else {
         const slots = getCallbackTimeSlots();
         response.suggestedAction = "select_callback_time";
-        response.options = slots.slice(0, 6).map(slot => ({
-          text: new Date(slot).toLocaleString(),
-          value: slot
+        // Return complete slot objects with date, time, value for calendar UI
+        response.options = slots.map(slot => ({
+          text: slot.label,
+          value: slot.value,
+          date: slot.date,
+          time: slot.time,
+          datetime: slot.datetime
         }));
-        response.message = "When would you like us to call you?";
+        response.message = "When would you like us to call you? Select a convenient time:";
       }
     } else if (message.toLowerCase().includes("history")) {
       if (!isLoggedIn) {
@@ -311,4 +315,50 @@ export async function handleCallbackRequest(req, res) {
   } catch (error) {
     console.error("Callback request error:", error);
     res.status(500).json({ error: "Failed to schedule callback" });  }
+}
+
+/**
+ * Get customer's callbacks
+ */
+export async function getCustomerCallbacks(req, res) {
+  try {
+    const customerId = req.user?.userId;
+    if (!customerId) {
+      return res.status(401).json({ error: "Login required" });
+    }
+
+    const status = req.query.status || "scheduled";
+    const { getUserCallbacks } = await import("../services/queueService.js");
+    const callbacks = await getUserCallbacks(customerId, status);
+    
+    res.json({ success: true, callbacks });
+  } catch (error) {
+    console.error("Get callbacks error:", error);
+    res.status(500).json({ error: "Failed to fetch callbacks" });
+  }
+}
+
+/**
+ * Cancel a callback
+ */
+export async function cancelCustomerCallback(req, res) {
+  try {
+    const customerId = req.user?.userId;
+    if (!customerId) {
+      return res.status(401).json({ error: "Login required" });
+    }
+
+    const { callbackId } = req.params;
+    if (!callbackId) {
+      return res.status(400).json({ error: "Callback ID is required" });
+    }
+
+    const { cancelCallback } = await import("../services/queueService.js");
+    const result = await cancelCallback(callbackId, customerId);
+    
+    res.json(result);
+  } catch (error) {
+    console.error("Cancel callback error:", error);
+    res.status(500).json({ error: "Failed to cancel callback" });
+  }
 }

@@ -13,6 +13,20 @@ import QRCode from "qrcode";
  */
 
 /**
+ * Format datetime in local timezone (without UTC conversion)
+ * This ensures the time stored matches the local time
+ */
+function formatLocalDateTime(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+
+/**
  * Generate QR code data and create consultation booking
  * Generates actual QR code image with consultation details
  */
@@ -61,7 +75,7 @@ export async function generateConsultationQR(customerId, enquiryId, preferredBra
           qr_code_image: qrCodeDataUrl,
           preferred_branch: preferredBranch || "Main Branch",
           status: "scheduled",
-          created_at: new Date()
+          created_at: formatLocalDateTime(new Date())
         }
       ])
       .select()
@@ -137,7 +151,7 @@ export async function submitConsultationFeedback(consultationId, customerId, fee
         feedback: feedback.message,
         rating: feedback.rating,
         status: "completed",
-        completed_at: new Date()
+        completed_at: formatLocalDateTime(new Date())
       })
       .eq("id", consultationId)
       .eq("customer_id", customerId)

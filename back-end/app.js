@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { chatWithAI, handleQueueAction, requestConsultationQR, handleCallbackRequest } from "./controllers/chatbotController.js";
+import { chatWithAI, handleQueueAction, requestConsultationQR, handleCallbackRequest, getCustomerCallbacks, cancelCustomerCallback } from "./controllers/chatbotController.js";
 import { register, login, getProfile } from "./controllers/authController.js";
 import { authMiddleware, optionalAuthMiddleware } from "./middlewares/authMiddleware.js";
 
@@ -30,6 +30,8 @@ app.get("/api/queue/position", authMiddleware, handleQueueAction);
 
 // Callback scheduling (requires login)
 app.post("/api/callbacks/schedule", authMiddleware, handleCallbackRequest);
+app.get("/api/callbacks", authMiddleware, getCustomerCallbacks);
+app.delete("/api/callbacks/:callbackId", authMiddleware, cancelCustomerCallback);
 
 // Consultation QR code (requires login)
 app.post("/api/consultations/qr", authMiddleware, requestConsultationQR);
