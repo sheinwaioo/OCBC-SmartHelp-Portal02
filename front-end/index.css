@@ -2020,13 +2020,13 @@ main {
 .form-input:focus {
   outline: none;
   border-color: #ef2b2d;
-  box-shadow: 0 0 0 3px rgba(239, 43, 45, 0.1);
+  border-width: 2px;
 }
 
 .form-input:focus-visible {
-  outline: 3px solid #ef2b2d;
-  outline-offset: 2px;
-  box-shadow: none;
+  outline: none;
+  border-color: #ef2b2d;
+  border-width: 2px;
 }
 
 .form-input[readonly] {
