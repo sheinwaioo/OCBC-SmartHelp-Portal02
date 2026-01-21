@@ -127,6 +127,47 @@ async function sendChatMessage() {
     return;
   }
 
+  if (message === "View tutorial again") {
+    userInput.value = "";
+    if (tutorialState.tutorialVersionId) {
+      // Restart the same tutorial from the beginning
+      startTutorial(tutorialState.tutorialVersionId, tutorialState.tutorialName || "Tutorial");
+    } else {
+      addBotMessage("Sorry, I can't find the previous tutorial. Please select a category to start.");
+    }
+    return;
+  }
+
+  if (message === "Yes, I'm all set!") {
+    userInput.value = "";
+    // Mark enquiry as resolved via self-service
+    if (chatFlowState.enquiryId) {
+      try {
+        await apiCall("/enquiry/resolve", {
+          method: "POST",
+          body: JSON.stringify({
+            enquiryId: chatFlowState.enquiryId,
+            resolutionMethod: "self-resolved"
+          })
+        });
+        // Show success toast
+        if (typeof showNotification === "function") {
+          showNotification("Enquiry marked resolved via self-resolved", "success");
+        }
+        addBotMessage("Great! I'm glad the tutorial helped you. Is there anything else I can help you with?");
+        showQuickReplies(["New Enquiry", "View History", "Go Back"]);
+      } catch (error) {
+        console.error("Failed to update enquiry status:", error);
+        addBotMessage("Thank you for the feedback! Is there anything else I can help you with?");
+        showQuickReplies(["New Enquiry", "Go Back"]);
+      }
+    } else {
+      addBotMessage("Great! Is there anything else I can help you with?");
+      showQuickReplies(["New Enquiry", "Go Back"]);
+    }
+    return;
+  }
+
   // Add user message to UI
   addUserMessage(message);
   userInput.value = "";
@@ -994,6 +1035,7 @@ const tutorialState = {
   currentStepIndex: 0,
   steps: [],
   tutorialVersionId: null,
+  tutorialName: null,
   isScrolling: false,
   scrollAnimInterval: null,
   isFlipped: false
@@ -1055,6 +1097,7 @@ async function startTutorial(tutorialVersionId, tutorialName) {
     tutorialState.currentStepIndex = 0;
     tutorialState.steps = data.steps;
     tutorialState.tutorialVersionId = tutorialVersionId;
+    tutorialState.tutorialName = tutorialName;
     tutorialState.isFlipped = false;
     
     // Render tutorial simulator in chat
@@ -1377,8 +1420,8 @@ function completeTutorial() {
   }
   
   addBotMessage("🎉 Great job! You've completed the tutorial. You should now be able to complete this task on your own.");
-  addBotMessage("Was this tutorial helpful?");
-  showQuickReplies(["Yes, I'm all set!", "I need more help", "Speak with Agent"]);
+  addBotMessage("Did this tutorial resolve your problem?");
+  showQuickReplies(["Yes, I'm all set!", "View tutorial again", "I need more help", "Speak with Agent"]);
 }
 
 /**

@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import { chatWithAI, handleQueueAction, requestConsultationQR, handleCallbackRequest, getCustomerCallbacks, cancelCustomerCallback } from "./controllers/chatbotController.js";
 import { register, login, getProfile } from "./controllers/authController.js";
 import { getTutorials, getTutorialsByCategoryName, getTutorialSteps } from "./controllers/tutorialController.js";
+import { resolveEnquiry } from "./controllers/enquiryController.js";
 import { authMiddleware, optionalAuthMiddleware } from "./middlewares/authMiddleware.js";
 
 dotenv.config();
@@ -46,6 +47,10 @@ app.get("/api/tutorials/category/:categoryName", getTutorialsByCategoryName);
 
 // Get tutorial steps by version ID
 app.get("/api/tutorials/:tutorialVersionId/steps", getTutorialSteps);
+
+// ================= ENQUIRY ROUTES =================
+// Mark enquiry as resolved
+app.post("/api/enquiry/resolve", resolveEnquiry);
 
 // Health check
 app.get("/api/health", (req, res) => {

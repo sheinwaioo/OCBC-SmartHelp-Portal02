@@ -2269,30 +2269,32 @@ main {
 
 .tutorial-close-btn {
   position: absolute;
-  top: -50px;
-  right: 10px;
-  width: 40px;
-  height: 40px;
+  top: 0;
+  right: -60px;
+  width: 48px;
+  height: 48px;
   border: 2px solid white;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.8);
   color: white;
-  font-size: 28px;
+  font-size: 32px;
   line-height: 1;
   border-radius: 50%;
   cursor: pointer;
   transition: all 0.2s;
-  z-index: 10;
+  z-index: 10001;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 300;
   backdrop-filter: blur(10px);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
 }
 
 .tutorial-close-btn:hover {
   background: #ef2b2d;
   border-color: #ef2b2d;
-  transform: scale(1.1);
+  transform: scale(1.1) rotate(90deg);
+  box-shadow: 0 4px 16px rgba(239, 43, 45, 0.5);
 }
 
 /* Phone Frame (outer bezel) */
@@ -2463,12 +2465,18 @@ main {
   border: 1px solid rgba(0, 0, 0, 0.05);
   padding: 12px;
   backface-visibility: hidden;
+  min-height: 80px;
+  display: flex;
+  flex-direction: column;
 }
 
 .coachmark-back {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
   transform: rotateY(180deg);
+  min-height: 80px;
 }
 
 .coachmark-step-label {
@@ -2477,6 +2485,7 @@ main {
   letter-spacing: 0.1em;
   color: #94a3b8;
   text-transform: uppercase;
+  flex-shrink: 0;
 }
 
 .coachmark-instruction {
@@ -2484,7 +2493,10 @@ main {
   font-size: 13px;
   font-weight: 500;
   color: #0f172a;
-  line-height: 1.4;
+  line-height: 1.5;
+  flex-grow: 1;
+  overflow-y: auto;
+  max-height: 150px;
 }
 
 .coachmark-hint {
@@ -2495,6 +2507,7 @@ main {
   text-align: right;
   letter-spacing: 0.1em;
   text-transform: uppercase;
+  flex-shrink: 0;
 }
 
 /* Next button for no-tap steps */

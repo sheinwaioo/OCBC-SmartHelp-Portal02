@@ -79,7 +79,7 @@ export async function createEnquiry(customerId, categoryName, subcategoryName) {
  */
 export async function getEnquiryHistory(customerId, limit = 10) {
   try {
-    const validMethods = ["self-service", "agent-online", "agent-physical"];
+    const validMethods = ["self-resolved", "agent-online", "agent-physical"];
     
     const { data, error } = await supabase
       .from("enquiry")
@@ -103,13 +103,14 @@ export async function getEnquiryHistory(customerId, limit = 10) {
  */
 export async function updateEnquiryStatus(enquiryId, status, resolutionMethod = null) {
   try {
+    const updateData = {
+      status,
+      resolution_method: resolutionMethod
+    };
+
     const { data, error } = await supabase
       .from("enquiry")
-      .update({
-        status,
-        resolution_method: resolutionMethod,
-        updated_at: formatLocalDateTime(new Date())
-      })
+      .update(updateData)
       .eq("enquiry_id", enquiryId)
       .select()
       .single();
@@ -171,7 +172,7 @@ export async function startService(enquiryId) {
  */
 export async function completeService(enquiryId, resolutionMethod) {
   try {
-    const validMethods = ["self-service", "agent-online", "agent-physical"];
+    const validMethods = ["self-resolved", "agent-online", "agent-physical"];
     if (!validMethods.includes(resolutionMethod)) {
       throw new Error(`Invalid resolution method: ${resolutionMethod}`);
     }

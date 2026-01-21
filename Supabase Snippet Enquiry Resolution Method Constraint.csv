@@ -1,0 +1,2 @@
+conname,definition
+enquiry_resolution_method_check,"CHECK (((resolution_method IS NULL) OR (resolution_method = ANY (ARRAY['self-resolved'::text, 'agent-online'::text, 'agent-physical'::text]))))"
