@@ -220,7 +220,7 @@ function handleSuggestedAction(action, options = []) {
       break;
 
     case "view_tutorial":
-      addBotMessage("📚 Here are the recommended steps for your inquiry:");
+      // Tutorial simulator will be launched by handleAssistanceSelection
       break;
 
     case "join_queue_or_callback":
@@ -334,6 +334,8 @@ async function handleOptionSelected(option, action) {
       handleAssistanceSelection(optionValue);
     } else if (action === "view_tutorial") {
       handleTutorialStep(optionValue);
+    } else if (action === "start_tutorial") {
+      startTutorial(optionValue, "Selected Tutorial");
     } else if (action === "join_queue_or_callback") {
       handleQueueOrCallback(optionValue);
     } else if (action === "select_callback_time") {
@@ -352,9 +354,14 @@ async function handleOptionSelected(option, action) {
  */
 async function handleAssistanceSelection(option) {
   if (option === "view_tutorial") {
-    addBotMessage("📚 Here are the step-by-step instructions for your inquiry:");
-    addBotMessage("Step 1: Open your OCBC mobile app\nStep 2: Navigate to the relevant section\nStep 3: Follow the on-screen prompts\n\nWould you like more detailed help or prefer to speak with an agent?");
-    showQuickReplies(["Speak with Agent", "Schedule Callback", "Go Back"]);
+    // Use subcategory from chatFlowState (tutorials are linked to subcategories in DB)
+    const subcategory = chatFlowState.subcategory;
+    if (subcategory) {
+      await handleTutorialStep(subcategory);
+    } else {
+      addBotMessage("Please select a specific service first to view tutorials.");
+      showQuickReplies(["Go Back"]);
+    }
   } else if (option === "physical_consultation") {
     if (!promptLogin("To schedule a physical consultation")) return;
     addBotMessage("Great! Let's schedule your consultation at an OCBC branch.");
@@ -981,18 +988,493 @@ async function cancelCallback(callbackId) {
 }
 
 /**
- * Handle tutorial step
+ * Tutorial Simulator State
  */
-function handleTutorialStep(step) {
-  const tutorials = {
-    "step_1": "Open your OCBC mobile app and tap on 'Settings' at the bottom of the screen.",
-    "step_2": "Select the section relevant to your inquiry (Cards, Accounts, Loans, etc.)",
-    "step_3": "Follow the on-screen instructions to complete your request.",
-    "escalate": "Would you like to speak with an agent? I can help connect you."
-  };
+const tutorialState = {
+  currentStepIndex: 0,
+  steps: [],
+  tutorialVersionId: null,
+  isScrolling: false,
+  scrollAnimInterval: null,
+  isFlipped: false
+};
 
-  addBotMessage(tutorials[step] || "Here's how to proceed with your inquiry.");
-  showQuickReplies(["Next Step", "Speak with Agent", "Go Back"]);
+/**
+ * Start Tutorial - Fetch and display tutorials for category
+ */
+async function handleTutorialStep(categoryName) {
+  addBotMessage(`Loading tutorials for ${categoryName}...`);
+  
+  try {
+    const response = await fetch(`http://localhost:3000/api/tutorials/category/${encodeURIComponent(categoryName)}`);
+    const data = await response.json();
+    
+    if (!data.success || !data.tutorials || data.tutorials.length === 0) {
+      addBotMessage("Sorry, no tutorials are available for this topic at the moment. Would you like to speak with an agent instead?");
+      showQuickReplies(["Speak with Agent", "Go Back"]);
+      return;
+    }
+    
+    // If only one tutorial, start it directly
+    if (data.tutorials.length === 1) {
+      startTutorial(data.tutorials[0].tutorial_version_id, data.tutorials[0].tutorial_name);
+    } else {
+      // Multiple tutorials - show selection
+      addBotMessage("Please select a tutorial:");
+      const options = data.tutorials.map(t => ({
+        text: t.tutorial_name,
+        value: t.tutorial_version_id,
+        action: "start_tutorial"
+      }));
+      showOptions(options);
+    }
+  } catch (error) {
+    console.error("Tutorial fetch error:", error);
+    addBotMessage("I'm having trouble loading the tutorials. Would you like to try again or speak with an agent?");
+    showQuickReplies(["Try Again", "Speak with Agent"]);
+  }
+}
+
+/**
+ * Load tutorial steps and start simulator
+ */
+async function startTutorial(tutorialVersionId, tutorialName) {
+  addBotMessage(`Starting: ${tutorialName}`);
+  
+  try {
+    const response = await fetch(`http://localhost:3000/api/tutorials/${tutorialVersionId}/steps`);
+    const data = await response.json();
+    
+    if (!data.success || !data.steps || data.steps.length === 0) {
+      addBotMessage("This tutorial has no steps available yet. Please try another option.");
+      showQuickReplies(["Go Back", "Speak with Agent"]);
+      return;
+    }
+    
+    // Initialize tutorial state
+    tutorialState.currentStepIndex = 0;
+    tutorialState.steps = data.steps;
+    tutorialState.tutorialVersionId = tutorialVersionId;
+    tutorialState.isFlipped = false;
+    
+    // Render tutorial simulator in chat
+    renderTutorialSimulator();
+    
+  } catch (error) {
+    console.error("Tutorial steps fetch error:", error);
+    addBotMessage("Unable to load tutorial steps. Please try again.");
+    showQuickReplies(["Go Back"]);
+  }
+}
+
+/**
+ * Render the phone frame and tutorial UI as a modal overlay
+ */
+function renderTutorialSimulator() {
+  // Create modal overlay
+  const modal = document.createElement("div");
+  modal.className = "tutorial-modal-overlay";
+  modal.id = "tutorial-modal";
+  
+  modal.innerHTML = `
+    <div class="tutorial-modal-content">
+      <button class="tutorial-close-btn" onclick="closeTutorialSimulator()">&times;</button>
+      <div class="phone-frame" id="phone-frame">
+        <div class="phone-screen">
+          <div class="phone-viewport" id="phone-viewport">
+            <!-- Screen content will be dynamically rendered here -->
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  
+  // Start with first step
+  renderCurrentStep();
+}
+
+/**
+ * Render current tutorial step
+ */
+function renderCurrentStep() {
+  const step = tutorialState.steps[tutorialState.currentStepIndex];
+  if (!step) return;
+  
+  const viewport = document.getElementById("phone-viewport");
+  if (!viewport) return;
+  
+  // Clear previous content
+  viewport.innerHTML = "";
+  tutorialState.isFlipped = false;
+  
+  // Stop any existing scroll animation
+  stopScrollAnimation();
+  
+  // Calculate dimensions
+  const phoneWidth = viewport.offsetWidth;
+  const screenHeight = phoneWidth * 2; // 9:18 aspect ratio
+  
+  // Calculate navbar height if nav asset exists
+  let navbarHeight = 0;
+  if (step.nav_public_url && step.nav_content_height && step.nav_content_width && step.nav_pixel_ratio) {
+    const intrinsicRatio = step.nav_content_height / step.nav_content_width;
+    navbarHeight = phoneWidth * intrinsicRatio;
+  }
+  
+  const viewportHeight = screenHeight - navbarHeight;
+  
+  // Create screen viewport container
+  const screenViewport = document.createElement("div");
+  screenViewport.className = "screen-viewport";
+  screenViewport.style.height = `${viewportHeight}px`;
+  screenViewport.style.bottom = `${navbarHeight}px`;
+  
+  // Create animated layer for screen content
+  const animLayer = document.createElement("div");
+  animLayer.id = "screen-anim-layer";
+  
+  if (step.screen_public_url) {
+    const screenImg = document.createElement("img");
+    screenImg.src = step.screen_public_url;
+    screenImg.alt = "Tutorial screen";
+    animLayer.appendChild(screenImg);
+  }
+  
+  screenViewport.appendChild(animLayer);
+  viewport.appendChild(screenViewport);
+  
+  // Add navbar overlay if exists
+  if (step.nav_public_url) {
+    const navOverlay = document.createElement("div");
+    navOverlay.className = "navbar-overlay";
+    navOverlay.style.height = `${navbarHeight}px`;
+    
+    const navImg = document.createElement("img");
+    navImg.src = step.nav_public_url;
+    navImg.alt = "Navigation bar";
+    navOverlay.appendChild(navImg);
+    
+    viewport.appendChild(navOverlay);
+  }
+  
+  // Add tap target if coordinates exist
+  if (step.target_x != null && step.target_y != null && step.target_w != null && step.target_h != null) {
+    addTapTarget(viewport, step, phoneWidth, screenHeight, navbarHeight);
+  }
+  
+  // Add coachmark instruction overlay
+  addCoachmark(viewport, step, phoneWidth, screenHeight, navbarHeight);
+  
+  // Disable scroll animation for now to allow proper interaction
+  // if (step.scroll_progress && step.scroll_progress > 0) {
+  //   startScrollAnimation(animLayer, step.scroll_progress);
+  // }
+  
+  // Add click handler to viewport
+  viewport.onclick = (e) => handlePhoneTap(e, step, phoneWidth, screenHeight, navbarHeight);
+}
+
+/**
+ * Add tap target hotspot
+ */
+function addTapTarget(viewport, step, phoneWidth, screenHeight, navbarHeight) {
+  const target = document.createElement("div");
+  target.className = "tap-target-cue";
+  target.id = "tap-target";
+  
+  // Calculate position and size
+  // Target coordinates are decimals (0-1), multiply directly by dimensions
+  const targetX = step.target_x * phoneWidth;
+  const targetY = step.target_y * screenHeight;
+  const targetW = step.target_w * phoneWidth;
+  const targetH = step.target_h * screenHeight;
+  
+  console.log("TAP TARGET POSITIONING:");
+  console.log({ phoneWidth, screenHeight, navbarHeight });
+  console.log("Raw coords:", { target_x: step.target_x, target_y: step.target_y, target_w: step.target_w, target_h: step.target_h });
+  console.log("Calculated px:", { targetX, targetY, targetW, targetH });
+  
+  target.style.left = `${targetX}px`;
+  target.style.top = `${targetY}px`;
+  target.style.width = `${targetW}px`;
+  target.style.height = `${targetH}px`;
+  
+  target.innerHTML = `
+    <div class="tap-target-inner">
+      <div class="tap-target-pulse"></div>
+    </div>
+  `;
+  
+  viewport.appendChild(target);
+}
+
+/**
+ * Add coachmark instruction overlay
+ */
+function addCoachmark(viewport, step, phoneWidth, screenHeight, navbarHeight) {
+  const overlay = document.createElement("div");
+  overlay.className = "coachmark-overlay";
+  overlay.id = "coachmark-overlay";
+  
+  const backdrop = document.createElement("div");
+  backdrop.className = "coachmark-backdrop";
+  overlay.appendChild(backdrop);
+  
+  const container = document.createElement("div");
+  container.className = "coachmark-container";
+  
+  // Position coachmark to avoid covering the hotspot
+  const hasTarget = step.target_x != null && step.target_y != null;
+  if (hasTarget) {
+    // Target is in upper portion (36.71-42.71%) - place coachmark at bottom
+    container.style.bottom = "5%";
+    container.style.left = "50%";
+    container.style.transform = "translateX(-50%)";
+  } else {
+    // No target - center coachmark
+    container.style.top = "50%";
+    container.style.left = "50%";
+    container.style.transform = "translate(-50%, -50%)";
+  }
+  
+  // 3D flip container
+  const flipContainer = document.createElement("div");
+  flipContainer.className = "coachmark-3d";
+  
+  const inner = document.createElement("div");
+  inner.className = "coachmark-inner";
+  inner.id = "coachmark-inner";
+  
+  // Front face - instruction
+  const front = document.createElement("div");
+  front.className = "coachmark-face coachmark-front";
+  front.innerHTML = `
+    <div class="coachmark-step-label">Step ${tutorialState.currentStepIndex + 1} of ${tutorialState.steps.length}</div>
+    <div class="coachmark-instruction">${step.instruction || "Tap the highlighted area"}</div>
+    ${step.tip ? '<div class="coachmark-hint">TAP FOR TIP ↻</div>' : ""}
+  `;
+  
+  // Back face - tip (if exists)
+  const back = document.createElement("div");
+  back.className = "coachmark-face coachmark-back";
+  back.innerHTML = `
+    <div class="coachmark-step-label">TIP</div>
+    <div class="coachmark-instruction">${step.tip || ""}</div>
+    <div class="coachmark-hint">TAP TO RETURN ↻</div>
+  `;
+  
+  inner.appendChild(front);
+  if (step.tip) {
+    inner.appendChild(back);
+  }
+  
+  flipContainer.appendChild(inner);
+  container.appendChild(flipContainer);
+  
+  // Add flip handler if tip exists
+  if (step.tip) {
+    flipContainer.onclick = (e) => {
+      e.stopPropagation();
+      tutorialState.isFlipped = !tutorialState.isFlipped;
+      inner.classList.toggle("flipped", tutorialState.isFlipped);
+    };
+  }
+  
+  overlay.appendChild(container);
+  
+  // If no tap target, show Next button
+  if (!hasTarget) {
+    const nextBtn = document.createElement("div");
+    nextBtn.className = "tutorial-next-btn";
+    nextBtn.innerHTML = '<button onclick="advanceTutorialStep()">Next</button>';
+    container.appendChild(nextBtn);
+  }
+  
+  viewport.appendChild(overlay);
+}
+
+/**
+ * Handle phone screen tap
+ */
+function handlePhoneTap(event, step, phoneWidth, screenHeight, navbarHeight) {
+  const viewport = event.currentTarget;
+  const rect = viewport.getBoundingClientRect();
+  
+  // Calculate tap coordinates relative to phone screen
+  const tapX = event.clientX - rect.left;
+  const tapY = event.clientY - rect.top;
+  
+  // Convert to percentages based on FULL screen dimensions
+  // Target coordinates in database are stored as decimals (0-1) of full screen
+  const tapXPercent = (tapX / phoneWidth) * 100;
+  const tapYPercent = (tapY / screenHeight) * 100;
+  
+  // Check if tap is within target bounds
+  const hasTarget = step.target_x != null && step.target_y != null && step.target_w != null && step.target_h != null;
+  
+  console.log("=== TAP DEBUG ===");
+  console.log("Viewport:", { phoneWidth, screenHeight });
+  console.log("Tap pixel:", { tapX, tapY });
+  console.log("Tap percent:", { tapXPercent, tapYPercent });
+  
+  if (hasTarget) {
+    // Target coordinates are decimals (0-1), convert to percentages (0-100)
+    const targetXStart = step.target_x * 100;
+    const targetYStart = step.target_y * 100;
+    const targetXEnd = (step.target_x + step.target_w) * 100;
+    const targetYEnd = (step.target_y + step.target_h) * 100;
+    
+    console.log("Target (%):", { targetXStart, targetYStart, targetXEnd, targetYEnd });
+    
+    const TOLERANCE = 5;
+    const isHit = 
+      tapXPercent >= (targetXStart - TOLERANCE) && 
+      tapXPercent <= (targetXEnd + TOLERANCE) &&
+      tapYPercent >= (targetYStart - TOLERANCE) && 
+      tapYPercent <= (targetYEnd + TOLERANCE);
+    
+    console.log("Hit:", isHit);
+    console.log("=================");
+    
+    if (isHit) {
+      advanceTutorialStep();
+    } else {
+      const phoneFrame = document.getElementById("phone-frame");
+      if (phoneFrame) {
+        phoneFrame.classList.add("shake");
+        setTimeout(() => phoneFrame.classList.remove("shake"), 350);
+      }
+    }
+  }
+}
+
+/**
+ * Advance to next tutorial step
+ */
+function advanceTutorialStep() {
+  tutorialState.currentStepIndex++;
+  
+  if (tutorialState.currentStepIndex >= tutorialState.steps.length) {
+    // Tutorial complete
+    completeTutorial();
+  } else {
+    // Render next step
+    renderCurrentStep();
+  }
+}
+
+/**
+ * Complete tutorial and show completion message
+ */
+function completeTutorial() {
+  stopScrollAnimation();
+  
+  const modal = document.getElementById("tutorial-modal");
+  if (modal) {
+    modal.remove();
+  }
+  
+  addBotMessage("🎉 Great job! You've completed the tutorial. You should now be able to complete this task on your own.");
+  addBotMessage("Was this tutorial helpful?");
+  showQuickReplies(["Yes, I'm all set!", "I need more help", "Speak with Agent"]);
+}
+
+/**
+ * Close tutorial simulator modal
+ */
+function closeTutorialSimulator() {
+  stopScrollAnimation();
+  
+  const modal = document.getElementById("tutorial-modal");
+  if (modal) {
+    modal.remove();
+  }
+  
+  addBotMessage("Tutorial closed. How else can I help you?");
+  showQuickReplies(["Try again", "Speak with Agent", "Go Back"]);
+}
+
+/**
+ * Start scroll animation loop
+ */
+function startScrollAnimation(animLayer, scrollProgress) {
+  if (tutorialState.isScrolling) return;
+  
+  tutorialState.isScrolling = true;
+  
+  const img = animLayer.querySelector("img");
+  if (!img) return;
+  
+  const viewport = animLayer.parentElement;
+  const viewportHeight = viewport.offsetHeight;
+  
+  // Wait for image to load
+  const animate = () => {
+    const imgHeight = img.offsetHeight;
+    const maxScroll = Math.max(0, imgHeight - viewportHeight);
+    const targetScroll = maxScroll * scrollProgress;
+    
+    let currentScroll = 0;
+    let direction = 1; // 1 = down, -1 = up
+    
+    const animationLoop = () => {
+      if (!tutorialState.isScrolling) return;
+      
+      if (direction === 1) {
+        // Scrolling down
+        const step = targetScroll / 80; // 1600ms / 20ms per frame
+        currentScroll = Math.min(currentScroll + step, targetScroll);
+        animLayer.style.transform = `translateY(-${currentScroll}px)`;
+        
+        if (currentScroll >= targetScroll) {
+          // Reached bottom - pause then reverse
+          setTimeout(() => {
+            direction = -1;
+            tutorialState.scrollAnimInterval = setInterval(animationLoop, 20);
+          }, 2000);
+          return;
+        }
+      } else {
+        // Scrolling up
+        const step = targetScroll / 60; // 1200ms / 20ms per frame
+        currentScroll = Math.max(currentScroll - step, 0);
+        animLayer.style.transform = `translateY(-${currentScroll}px)`;
+        
+        if (currentScroll <= 0) {
+          // Reached top - pause then repeat
+          setTimeout(() => {
+            direction = 1;
+            tutorialState.scrollAnimInterval = setInterval(animationLoop, 20);
+          }, 600);
+          return;
+        }
+      }
+      
+      tutorialState.scrollAnimInterval = setTimeout(animationLoop, 20);
+    };
+    
+    animationLoop();
+  };
+  
+  if (img.complete) {
+    animate();
+  } else {
+    img.onload = animate;
+  }
+}
+
+/**
+ * Stop scroll animation
+ */
+function stopScrollAnimation() {
+  tutorialState.isScrolling = false;
+  if (tutorialState.scrollAnimInterval) {
+    clearInterval(tutorialState.scrollAnimInterval);
+    clearTimeout(tutorialState.scrollAnimInterval);
+    tutorialState.scrollAnimInterval = null;
+  }
 }
 
 /**
@@ -1156,6 +1638,10 @@ function downloadQRCode(qrData) {
   link.click();
   document.body.removeChild(link);
 }
+
+// Make advanceTutorialStep globally accessible for onclick handlers
+window.advanceTutorialStep = advanceTutorialStep;
+window.closeTutorialSimulator = closeTutorialSimulator;
 
 // Initialize chatbot on page load
 document.addEventListener("DOMContentLoaded", initChatbot);

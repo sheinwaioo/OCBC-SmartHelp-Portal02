@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { chatWithAI, handleQueueAction, requestConsultationQR, handleCallbackRequest, getCustomerCallbacks, cancelCustomerCallback } from "./controllers/chatbotController.js";
 import { register, login, getProfile } from "./controllers/authController.js";
+import { getTutorials, getTutorialsByCategoryName, getTutorialSteps } from "./controllers/tutorialController.js";
 import { authMiddleware, optionalAuthMiddleware } from "./middlewares/authMiddleware.js";
 
 dotenv.config();
@@ -35,6 +36,16 @@ app.delete("/api/callbacks/:callbackId", authMiddleware, cancelCustomerCallback)
 
 // Consultation QR code (requires login)
 app.post("/api/consultations/qr", authMiddleware, requestConsultationQR);
+
+// ================= TUTORIAL ROUTES =================
+// Get all published tutorials
+app.get("/api/tutorials", getTutorials);
+
+// Get tutorials by category
+app.get("/api/tutorials/category/:categoryName", getTutorialsByCategoryName);
+
+// Get tutorial steps by version ID
+app.get("/api/tutorials/:tutorialVersionId/steps", getTutorialSteps);
 
 // Health check
 app.get("/api/health", (req, res) => {

@@ -2237,3 +2237,357 @@ main {
     max-width: none;
   }
 }
+
+/* =============================================
+   TUTORIAL SIMULATOR STYLES
+   ============================================= */
+
+/* Tutorial Modal Overlay */
+.tutorial-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 20px;
+}
+
+.tutorial-modal-content {
+  position: relative;
+  max-width: 320px;
+  width: 100%;
+  max-height: 90vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tutorial-close-btn {
+  position: absolute;
+  top: -50px;
+  right: 10px;
+  width: 40px;
+  height: 40px;
+  border: 2px solid white;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 28px;
+  line-height: 1;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 300;
+  backdrop-filter: blur(10px);
+}
+
+.tutorial-close-btn:hover {
+  background: #ef2b2d;
+  border-color: #ef2b2d;
+  transform: scale(1.1);
+}
+
+/* Phone Frame (outer bezel) */
+.phone-frame {
+  border-radius: 32px;
+  background: #1e293b;
+  padding: 10px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+  transition: transform 0.35s ease-in-out;
+  width: 100%;
+  max-width: 280px;
+}
+
+.phone-frame.shake {
+  animation: shake 0.35s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-10px); }
+  50% { transform: translateX(10px); }
+  75% { transform: translateX(-10px); }
+}
+
+/* Phone Screen (inner display) */
+.phone-screen {
+  border-radius: 2rem;
+  background: white;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+}
+
+.phone-viewport {
+  aspect-ratio: 9 / 18;
+  width: 100%;
+  background: #f8fafc;
+  overflow: hidden;
+  position: relative;
+  cursor: pointer;
+}
+
+/* Screen content viewport */
+.screen-viewport {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  overflow: hidden;
+}
+
+/* Animated screen layer */
+#screen-anim-layer {
+  width: 100%;
+  will-change: transform;
+}
+
+#screen-anim-layer img {
+  width: 100%;
+  height: auto;
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* Navbar overlay */
+.navbar-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.navbar-overlay img {
+  width: 100%;
+  height: auto;
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* Tap target hotspot */
+.tap-target-cue {
+  position: absolute;
+  pointer-events: none;
+  z-index: 20;
+  transition: opacity 0.3s;
+}
+
+.tap-target-cue.disabled {
+  opacity: 0.4;
+}
+
+.tap-target-inner {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 4px solid rgba(239, 43, 45, 0.8);
+  background: rgba(239, 43, 45, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tap-target-pulse {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #ef2b2d;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.5);
+  }
+}
+
+/* Coachmark overlay */
+.coachmark-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
+}
+
+.coachmark-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+}
+
+.coachmark-container {
+  position: absolute;
+  padding: 0 16px;
+  width: 90%;
+  max-width: 260px;
+  pointer-events: auto;
+}
+
+/* 3D flip effect */
+.coachmark-3d {
+  perspective: 1000px;
+  cursor: pointer;
+}
+
+.coachmark-inner {
+  position: relative;
+  transition: transform 450ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  transform-style: preserve-3d;
+}
+
+.coachmark-inner.flipped {
+  transform: rotateY(180deg);
+}
+
+.coachmark-face {
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  padding: 12px;
+  backface-visibility: hidden;
+}
+
+.coachmark-back {
+  position: absolute;
+  inset: 0;
+  transform: rotateY(180deg);
+}
+
+.coachmark-step-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: #94a3b8;
+  text-transform: uppercase;
+}
+
+.coachmark-instruction {
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #0f172a;
+  line-height: 1.4;
+}
+
+.coachmark-hint {
+  margin-top: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-align: right;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* Next button for no-tap steps */
+.tutorial-next-btn {
+  margin-top: 24px;
+  display: flex;
+  justify-content: center;
+}
+
+.tutorial-next-btn button {
+  border-radius: 12px;
+  background: #0f172a;
+  color: white;
+  padding: 12px 32px;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.tutorial-next-btn button:hover {
+  background: #1e293b;
+}
+
+/* Loading and error states */
+.tutorial-loading,
+.tutorial-error,
+.tutorial-no-steps {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: #64748b;
+  padding: 24px;
+  text-align: center;
+}
+
+.tutorial-error {
+  color: #dc2626;
+}
+
+/* Completion screen */
+.tutorial-complete {
+  padding: 24px;
+  text-align: center;
+}
+
+.tutorial-complete-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 12px;
+}
+
+.tutorial-complete-message {
+  font-size: 14px;
+  color: #64748b;
+  margin-bottom: 24px;
+}
+
+.tutorial-complete-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tutorial-complete-actions button {
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tutorial-complete-actions .btn-primary {
+  background: #ef2b2d;
+  color: white;
+}
+
+.tutorial-complete-actions .btn-primary:hover {
+  background: #c41f21;
+}
+
+.tutorial-complete-actions .btn-secondary {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.tutorial-complete-actions .btn-secondary:hover {
+  background: #e2e8f0;
+}
