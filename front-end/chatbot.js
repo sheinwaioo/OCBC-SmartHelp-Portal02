@@ -330,10 +330,21 @@ function showOptionsButtons(options, action) {
   optionsContainer.className = "chat-options";
 
   options.forEach(option => {
+    const buttonText = option.text || option;
+    const buttonValue = option.value || option;
+    
+    // Get emoji for this button
+    const emoji = getButtonIcon(buttonText);
+    
     const button = document.createElement("button");
     button.className = "option-button";
-    button.textContent = option.text || option;
-    button.value = option.value || option;
+    button.value = buttonValue;
+    
+    // Create card-style button content: emoji on top, text below
+    button.innerHTML = `
+      <div class="button-icon">${emoji}</div>
+      <div class="button-text">${buttonText}</div>
+    `;
 
     button.addEventListener("click", () => {
       handleOptionSelected(option, action);

@@ -154,13 +154,66 @@ function formatTimeSlot(isoString) {
 }
 
 /**
- * Create button element
+ * Button emoji mapping for common actions
+ */
+const BUTTON_ICONS = {
+  "Yes, I'm all set!": "✓",
+  "View tutorial again": "🔄",
+  "I need more help": "❓",
+  "Speak with Agent": "🎧",
+  "New Enquiry": "➕",
+  "Go Back": "←",
+  "Join Queue Now": "📋",
+  "Schedule Callback": "📅",
+  "View QR Code": "📱",
+  "Download QR Code": "⬇️",
+  "Check Queue Status": "ℹ️",
+  "View History": "📜",
+  "Try Again": "🔁",
+  "Schedule New Callback": "📅",
+  "Leave Queue & Schedule Callback": "🔄",
+  "View My Callbacks": "📞",
+  "Check Balance": "💳",
+  "View My Consultations": "📹",
+  "Apply Now": "✏️",
+  "Card Services": "💳",
+  "Account & Banking": "🏦",
+  "Check Enquiry History": "📋",
+  "View Scheduled Callbacks": "📅",
+  "View Available Consultations": "📹",
+  "Report lost card": "⚠️",
+  "Lock/unlock card": "🔒",
+  "Manage card limit": "💰",
+  "Link account to card": "🔗",
+  "View Tutorial": "📚",
+  "Physical Consultation": "🏪",
+  "Online Agent Support": "💬"
+};
+
+/**
+ * Get emoji for button text
+ */
+function getButtonIcon(buttonText) {
+  return BUTTON_ICONS[buttonText] || "→";
+}
+
+/**
+ * Create button element with card-style layout
  */
 function createButton(text, value, additionalClass = "") {
   const button = document.createElement("button");
   button.className = `quick-reply ${additionalClass}`;
-  button.textContent = text;
   button.value = value;
+  
+  // Get emoji for this button
+  const emoji = getButtonIcon(text);
+  
+  // Create card-style button content: emoji on top, text below
+  button.innerHTML = `
+    <div class="button-icon">${emoji}</div>
+    <div class="button-text">${text}</div>
+  `;
+  
   return button;
 }
 
